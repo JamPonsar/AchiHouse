@@ -1,6 +1,6 @@
 {
   // Cloudflare Worker config for the Achi House website.
-  // See README.md → "Deploying to Cloudflare" before the first deploy.
+  // See README.md → "Deploying to Cloudflare".
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "achihouse",
   "main": "worker/index.js",
@@ -18,8 +18,7 @@
     {
       "binding": "DB",
       "database_name": "achihouse-db",
-      // Replace with the id printed by: npx wrangler d1 create achihouse-db
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "bb3149b7-940f-492d-a16a-99579f1a1e82"
     }
   ],
 
