@@ -1,0 +1,30 @@
+{
+  // Cloudflare Worker config for the Achi House website.
+  // See README.md → "Deploying to Cloudflare" before the first deploy.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "achihouse",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-09-01",
+
+  // The React site (built by Vite). Unknown paths fall back to index.html so
+  // links like /events or /admin work when opened directly.
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/media/*"]
+  },
+
+  // Database for site content, drafts, edit history and booking requests.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "achihouse-db",
+      // Replace with the id printed by: npx wrangler d1 create achihouse-db
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+
+  // Storage for photos uploaded through the admin page.
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "achihouse-media" }
+  ]
+}
