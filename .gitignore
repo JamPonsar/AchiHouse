@@ -4,4 +4,4 @@ dist/
 .dev.vars*
 .DS_Store
 # Original full-size photos (web-sized copies live in public/photos)
-Photos/
+/Photos/
