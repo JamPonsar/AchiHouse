@@ -29,7 +29,7 @@ const SECTIONS = [
   { to: "/admin/about", label: "About page", icon: "📖" },
   { to: "/admin/events", label: "Events", icon: "📅" },
   { to: "/admin/photos", label: "Photos", icon: "📷" },
-  { to: "/admin/booking", label: "Book the Space", icon: "🗓️" },
+  { to: "/admin/booking", label: "Renting", icon: "🗓️" },
   { to: "/admin/contact", label: "Contact info", icon: "☎️" },
   { to: "/admin/donate", label: "Donate page", icon: "💛" },
   { group: "Other" },

@@ -34,7 +34,7 @@ export default function Requests() {
 
   return (
     <div className="a-page">
-      <PageTitle title="Messages & requests" intro="Booking requests and questions sent from the Book the Space page." />
+      <PageTitle title="Messages & requests" intro="Booking requests and questions sent from the Renting page." />
       <div className="a-note">
         ℹ️ Unlike page edits, actions here take effect right away. <b>Approving</b> a booking immediately shows that date as booked on the website.
       </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import MonthCalendar from "../components/MonthCalendar.jsx";
 import EventModal, { Icon } from "../components/EventModal.jsx";
+import NoUpcoming from "../components/NoUpcoming.jsx";
 import PageHeader from "./PageHeader.jsx";
 import { useContent, photoSrc } from "../lib/content.jsx";
 import { formatDate, formatTime, formatTimeRange, fromKey, sortEvents, todayKey } from "../lib/dates.js";
@@ -50,7 +51,7 @@ export default function Events() {
           </div>
 
           <div className="event-list">
-            {list.length === 0 && <p className="muted">No {tab} events.</p>}
+            {list.length === 0 && (tab === "upcoming" ? <NoUpcoming /> : <p className="muted">No past events yet.</p>)}
             {list.map((ev) => {
               const d = fromKey(ev.date);
               const photoCount = content.photos.filter((p) => p.eventId === ev.id).length;

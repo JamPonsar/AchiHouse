@@ -268,3 +268,12 @@ select.a-input { cursor: pointer; }
 .a-login .a-error { margin: 0; background: #f8e0e0; padding: 10px 14px; border-radius: 10px; font-size: .93rem; }
 .a-login-back { text-align: center; color: var(--a-muted); font-size: .9rem; text-decoration: none; }
 .a-nav-signout { margin-top: auto; justify-content: flex-start; }
+
+/* Repeating events */
+.a-repeat-preview { background: #faf8f5; border: 1px solid var(--a-line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.a-date-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.a-date-chip { background: var(--a-paper); border: 1px solid var(--a-line); border-radius: 999px; padding: 4px 12px; font-size: .88rem; color: var(--a-ink); text-decoration: none; }
+.a-date-link:hover { border-color: var(--a-primary); }
+.a-date-chip.current { background: var(--a-primary); border-color: var(--a-primary); color: #fff; font-weight: 600; }
+.a-series-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.a-dialog-actions.a-stack { flex-direction: column; align-items: stretch; }

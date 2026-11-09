@@ -378,3 +378,8 @@ button { font: inherit; color: inherit; }
 .contact-card a:hover { text-decoration: underline; }
 .contact-card a.text-link { color: var(--maroon); }
 .logo-mark { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+
+/* Empty state for upcoming events */
+.empty-events { background: var(--paper); border: 1px dashed #d9c7a5; border-radius: var(--radius); padding: 28px 24px; text-align: center; }
+.empty-events strong { font-family: var(--serif); font-size: 1.25rem; font-weight: 500; }
+.empty-events p { margin: .4em 0 0; color: var(--muted); }

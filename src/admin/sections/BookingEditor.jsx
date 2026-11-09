@@ -23,7 +23,7 @@ export default function BookingEditor() {
 
   return (
     <div className="a-page">
-      <PageTitle title="Book the Space" intro="Information for people who want to rent the hall, and which days are unavailable.">
+      <PageTitle title="Renting" intro="Information for people who want to rent the hall, and which days are unavailable.">
         <a className="a-btn a-btn-quiet" href="/book" target="_blank" rel="noreferrer">View page ↗</a>
       </PageTitle>
 
@@ -36,7 +36,7 @@ export default function BookingEditor() {
       {b.pricing && (
         <Card
           title="Rental rates"
-          help="Shown as a price list on the Book the Space page."
+          help="Shown as a price list on the Renting page."
           actions={
             <button className="a-btn a-btn-sm" onClick={() => edit((d) => { d.booking.pricing.rows.push({ id: newId("pr"), label: "New rental period", time: "", price: "$", icon: "day" }); })}>+ Add a rate</button>
           }

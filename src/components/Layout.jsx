@@ -9,7 +9,7 @@ export const NAV = [
   { to: "/about", label: "About" },
   { to: "/events", label: "Events" },
   { to: "/photos", label: "Photos" },
-  { to: "/book", label: "Book the Space" },
+  { to: "/book", label: "Renting" },
   { to: "/contact", label: "Contact" },
 ];
 

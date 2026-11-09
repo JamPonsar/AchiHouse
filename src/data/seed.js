@@ -220,7 +220,7 @@ export const seedContent = {
   events,
   photos,
   booking: {
-    heading: "Book the Space",
+    heading: "Renting",
     intro:
       "Achi House is available to rent for community events, family celebrations, memorials, meetings, and classes. See our rental rates below and check the calendar for open dates, then send us a request. We'll get back to you to confirm.",
     details: [

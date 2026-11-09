@@ -67,3 +67,60 @@ export function icsFor(ev) {
   ].filter(Boolean);
   return "data:text/calendar;charset=utf-8," + encodeURIComponent(lines.join("\r\n"));
 }
+
+// ── Repeating events ─────────────────────────────────────────────────────
+export function addDays(key, n) {
+  const d = fromKey(key);
+  d.setDate(d.getDate() + n);
+  return toKey(d);
+}
+
+const ordinal = (n) => {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+// kind: "weekly" | "biweekly" | "monthly-date" | "monthly-weekday"
+// Returns `count` dates, the first being the start date itself.
+export function generateDates(startKey, kind, count) {
+  const start = fromKey(startKey);
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    if (kind === "weekly") out.push(addDays(startKey, 7 * i));
+    else if (kind === "biweekly") out.push(addDays(startKey, 14 * i));
+    else {
+      const first = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      const y = first.getFullYear(), m = first.getMonth();
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      if (kind === "monthly-date") {
+        // same day number each month (the 31st becomes the last day of shorter months)
+        out.push(toKey(new Date(y, m, Math.min(start.getDate(), daysInMonth))));
+      } else {
+        // same weekday each month, e.g. "2nd Saturday" (a 5th one means "last")
+        const weekday = start.getDay();
+        const nth = Math.ceil(start.getDate() / 7);
+        if (nth >= 5) {
+          const last = new Date(y, m, daysInMonth);
+          last.setDate(daysInMonth - ((last.getDay() - weekday + 7) % 7));
+          out.push(toKey(last));
+        } else {
+          const offset = (weekday - first.getDay() + 7) % 7;
+          out.push(toKey(new Date(y, m, 1 + offset + 7 * (nth - 1))));
+        }
+      }
+    }
+  }
+  return out;
+}
+
+export function repeatOptions(startKey) {
+  const d = fromKey(startKey);
+  const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
+  const nth = Math.ceil(d.getDate() / 7);
+  return [
+    { value: "weekly", label: `Every week on ${weekday}` },
+    { value: "biweekly", label: `Every 2 weeks on ${weekday}` },
+    { value: "monthly-weekday", label: `Every month on the ${nth >= 5 ? "last" : ordinal(nth)} ${weekday}` },
+    { value: "monthly-date", label: `Every month on the ${ordinal(d.getDate())}` },
+  ];
+}

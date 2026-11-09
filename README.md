@@ -2,7 +2,7 @@
 
 Website for **Achi House**, a Tibetan non-profit community center. It has a public site, plus an editor at **`/admin`** where the organization can change text, photos, events and more without touching code.
 
-- **Public pages:** Home · About · Events · Photos · Book the Space · Contact · Donate
+- **Public pages:** Home · About · Events · Photos · Renting · Contact · Donate
 - **Admin (`/admin`):** edits are saved automatically as a private *draft*. Nothing changes on the live site until you click **Publish changes**. Every publish is saved in **Edit history** and can be restored.
 
 ## Tech

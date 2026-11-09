@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Slideshow from "../components/Slideshow.jsx";
 import Text from "../components/Text.jsx";
+import NoUpcoming from "../components/NoUpcoming.jsx";
 import EventModal, { Icon } from "../components/EventModal.jsx";
 import { useContent, photoSrc } from "../lib/content.jsx";
 import { formatDate, formatTimeRange, fromKey, sortEvents, todayKey } from "../lib/dates.js";
@@ -63,7 +64,7 @@ export default function Home() {
             <Link to="/events" className="text-link">View full calendar →</Link>
           </div>
           {upcoming.length === 0 ? (
-            <p className="muted">No upcoming events right now. Check back soon!</p>
+            <NoUpcoming />
           ) : (
             <div className="event-cards">
               {upcoming.map((ev) => {
