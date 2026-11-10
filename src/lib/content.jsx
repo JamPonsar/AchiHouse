@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "./api.js";
 import { seedContent } from "../data/seed.js";
+import { withDefaults } from "./defaults.js";
 
 const ContentContext = createContext(null);
 
@@ -63,13 +64,13 @@ export function ContentProvider({ children }) {
     // Comparing an old version: show it, highlighted where it differs from the current version
     const load = preview && compare
       ? Promise.all([api.get("/api/admin/draft"), api.get(`/api/admin/history/${compare.id}`)])
-          .then(([r, old]) => { setPublished(r.draft || r.published || null); return old; })
+          .then(([r, old]) => { setPublished(withDefaults(r.draft || r.published || null)); return old; })
       : preview
       ? api.get("/api/admin/draft")
-          .then((r) => { setPublished(r.published || null); return r.draft || r.published; })
+          .then((r) => { setPublished(withDefaults(r.published || null)); return r.draft || r.published; })
           .catch(() => api.get("/api/content"))
       : api.get("/api/content");
-    load.then(setContent).catch((err) => {
+    load.then((c) => setContent(withDefaults(c))).catch((err) => {
       console.warn("Could not load content from the server; using starter content.", err);
       setContent(seedContent);
     });
@@ -103,11 +104,20 @@ export function eventCover(content, ev) {
 
 // How an event's cover is framed (moved and zoomed) wherever it is shown as a cropped picture.
 // Use with className="cover-framed" (see styles.css).
-export function coverStyle(content, ev, srcOverride) {
-  const src = srcOverride || eventCover(content, ev);
+export function framedStyle(src, { x = 50, y = 50, zoom = 1 } = {}) {
   return {
     "--cover": src ? `url("${src}")` : "none",
-    "--cover-pos": `${ev.coverX ?? 50}% ${ev.coverY ?? 50}%`,
-    "--cover-zoom": ev.coverZoom || 1,
+    "--cover-pos": `${x}% ${y}%`,
+    "--cover-zoom": zoom || 1,
   };
+}
+
+export function coverStyle(content, ev, srcOverride) {
+  return framedStyle(srcOverride || eventCover(content, ev), { x: ev.coverX ?? 50, y: ev.coverY ?? 50, zoom: ev.coverZoom });
+}
+
+// Lineage master pictures start framed toward the top, so faces aren't cut off in wide crops
+export const MASTER_FRAME = { x: 50, y: 20, zoom: 1 };
+export function masterFrame(m) {
+  return { x: m.imageX ?? MASTER_FRAME.x, y: m.imageY ?? MASTER_FRAME.y, zoom: m.imageZoom || 1 };
 }

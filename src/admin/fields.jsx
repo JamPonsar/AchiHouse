@@ -180,7 +180,7 @@ export function PhotoField({ label, help, value, onChange, uploadDefaults, allow
 
 // A cover image that belongs to the item itself. Uploading or choosing one stores a separate copy
 // of the image, so deleting the photo from the photo library never removes it from here.
-export function CoverField({ label, help, value, onChange, frame, onFrame }) {
+export function CoverField({ label, help, value, onChange, frame, onFrame, frameOptions }) {
   const { draft, uploadImage, showToast } = useAdmin();
   const [picking, setPicking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -205,7 +205,7 @@ export function CoverField({ label, help, value, onChange, frame, onFrame }) {
         </div>
         <input ref={input} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; if (f) onFile(f); }} />
       </div>
-      {value && frame && <FramePicker src={value} frame={frame} onFrame={onFrame} />}
+      {value && frame && <FramePicker src={value} frame={frame} onFrame={onFrame} {...frameOptions} />}
       {picking && (
         <PhotoPicker
           onClose={() => setPicking(false)}
@@ -218,7 +218,15 @@ export function CoverField({ label, help, value, onChange, frame, onFrame }) {
 
 // Drag the picture and zoom to choose what part shows when it is cropped (cards, the event popup,
 // and especially phones, where the picture is cropped differently). The same framing is used everywhere.
-function FramePicker({ src, frame, onFrame }) {
+function FramePicker({
+  src, frame, onFrame,
+  aspect: stageAspect = "16/10", // shape of the big draggable area
+  home = { x: 50, y: 50, zoom: 1 }, // where "Re-center" goes
+  previews = [
+    { label: "Event popup on a phone", className: "a-frame-phone-banner" },
+    { label: "Event card", className: "a-frame-card" },
+  ],
+}) {
   const stage = useRef(null);
   const drag = useRef(null);
   const [aspect, setAspect] = useState(null); // natural width / height of the picture
@@ -227,7 +235,7 @@ function FramePicker({ src, frame, onFrame }) {
     "--cover-pos": `${frame.x}% ${frame.y}%`,
     "--cover-zoom": frame.zoom,
   };
-  const moved = frame.x !== 50 || frame.y !== 50 || frame.zoom !== 1;
+  const moved = frame.x !== home.x || frame.y !== home.y || frame.zoom !== home.zoom;
   const clamp = (n) => Math.max(0, Math.min(100, n));
 
   // Figure out the picture's shape, so dragging moves it exactly as far as the pointer moves
@@ -261,7 +269,7 @@ function FramePicker({ src, frame, onFrame }) {
           <div
             ref={stage}
             className="a-frame-stage cover-framed"
-            style={style}
+            style={{ ...style, aspectRatio: stageAspect }}
             title="Drag to move the picture"
             onPointerDown={(e) => {
               e.currentTarget.setPointerCapture(e.pointerId);
@@ -281,17 +289,15 @@ function FramePicker({ src, frame, onFrame }) {
           </label>
         </div>
         <div className="a-frame-previews">
-          <div>
-            <small>Event popup on a phone</small>
-            <div className="a-frame-phone-banner cover-framed" style={style} />
-          </div>
-          <div>
-            <small>Event card</small>
-            <div className="a-frame-card cover-framed" style={style} />
-          </div>
+          {previews.map((p) => (
+            <div key={p.label}>
+              <small>{p.label}</small>
+              <div className={`${p.className} cover-framed`} style={style} />
+            </div>
+          ))}
         </div>
       </div>
-      <button type="button" className="a-link-btn" disabled={!moved} onClick={() => onFrame({ coverX: 50, coverY: 50, coverZoom: 1 })}>
+      <button type="button" className="a-link-btn" disabled={!moved} onClick={() => onFrame({ coverX: home.x, coverY: home.y, coverZoom: home.zoom })}>
         ↺ Re-center
       </button>
     </div>

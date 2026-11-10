@@ -3,6 +3,7 @@ import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { listChanges } from "../lib/diff.js";
 import { baselineOf } from "../lib/changes.js";
+import { withDefaults } from "../lib/defaults.js";
 import { prepareImage } from "./image.js";
 import Modal from "../components/Modal.jsx";
 import Login from "./Login.jsx";
@@ -107,9 +108,11 @@ export default function AdminApp() {
   const load = useCallback(() => {
     api.get("/api/admin/draft")
       .then((r) => {
-        setPublished(r.published);
-        setDraft(r.draft || r.published);
-        lastSaved.current = JSON.stringify(r.draft || r.published);
+        const pub = withDefaults(r.published);
+        const dr = withDefaults(r.draft || r.published);
+        setPublished(pub);
+        setDraft(dr);
+        lastSaved.current = JSON.stringify(dr);
       })
       .catch((e) => (e.status === 401 ? setNeedsLogin(true) : setLoadError(e.message)));
     api.get("/api/admin/requests").then((r) => setNewRequests(r.filter((x) => x.status === "new").length)).catch(() => {});
@@ -291,6 +294,7 @@ export default function AdminApp() {
   };
 
   const replaceDraft = (data) => {
+    data = withDefaults(data);
     lastSaved.current = JSON.stringify(data);
     setDraft(data);
   };

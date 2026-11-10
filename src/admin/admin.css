@@ -375,3 +375,5 @@ select.a-input { cursor: pointer; }
 .a-frame-previews small { display: block; color: var(--a-muted); margin-bottom: 4px; font-size: .78rem; }
 .a-frame-phone-banner { width: 170px; aspect-ratio: 16/8; border-radius: 8px; background: var(--a-bg); border: 1px solid var(--a-line); }
 .a-frame-card { width: 130px; aspect-ratio: 16/10; border-radius: 8px; background: var(--a-bg); border: 1px solid var(--a-line); }
+.a-frame-popup { width: 170px; aspect-ratio: 16/9; border-radius: 8px; background: var(--a-bg); border: 1px solid var(--a-line); }
+.a-frame-circle { width: 90px; aspect-ratio: 1; border-radius: 50%; background: var(--a-bg); border: 1px solid var(--a-line); }

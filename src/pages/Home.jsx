@@ -35,7 +35,7 @@ export default function Home() {
             <Link to="/about" className="text-link">Learn more about us →</Link>
           </div>
           {home.introPhoto && (
-            <div className="framed-photo"><img src={photoSrc(content, home.introPhoto)} alt="" /></div>
+            <div className="framed-photo plain"><img src={photoSrc(content, home.introPhoto)} alt="" /></div>
           )}
         </div>
       </section>

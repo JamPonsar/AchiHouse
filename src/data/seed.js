@@ -209,6 +209,39 @@ export const seedContent = {
       "Kitchen for community meals",
       "Tables, chairs and sound system",
     ],
+    nameHeading: "Why we're called Achi House",
+    nameText:
+      "Our name honors Achi Chökyi Drölma, the much-loved female Dharma protector of the Drikung Kagyu lineage.\n\nAccording to tradition, Achi was born around the eleventh century near Drikung in central Tibet. As a child she recited the mantra of Tara, and she grew into a great yogini, regarded as an emanation of Vajrayogini. She married the yogi Ame Tsultrim Gyatso and had four sons. Her descendants include Kyobpa Jigten Sumgön, the founder of the Drikung Kagyu lineage, who is said to have called her his grandmother.\n\nLate in life she led her followers to the Tingring cave, where she transformed a corpse into a sacred offering that bestowed spiritual accomplishments, and then departed for the Buddha field on her blue horse, without leaving her body. She vowed to protect the Buddha's teachings, and Jigten Sumgön composed a practice dedicated to her. She has been the protector of the Drikung Kagyu tradition ever since.\n\nWe chose her name for our center in the hope that it will be a place of protection, blessing and welcome for our whole community.",
+    nameImage: "/lineage/achi-chokyi-drolma.jpg",
+    nameCaption: "Achi Chökyi Drölma, traditional Tibetan painting",
+    mastersHeading: "Our Lineage",
+    mastersIntro: "The great masters of the Drikung Kagyu lineage, whose teachings guide our community.",
+    masters: [
+      {
+        id: "ms1",
+        name: "Kyobpa Jigten Sumgön",
+        tagline: "Founder of the Drikung Kagyu lineage",
+        image: "/lineage/jigten-sumgon.jpg",
+        bio:
+          "Kyobpa Jigten Sumgön was the founder of the Drikung Kagyu lineage of Tibetan Buddhism. He was born into the Kyura family in Tibet and showed great intelligence and spiritual qualities from a very young age. He studied Buddhist teachings, sutras, and tantras under several great masters.\n\nHe became the principal disciple and spiritual successor of Phagmodrupa, from whom he received the complete teachings of sutra and tantra. After years of meditation and spiritual practice, he attained enlightenment through the power of wisdom, meditation, and compassion.\n\nAt the age of 37, he established Drikung Jangchubling Monastery (Drikung Thil), which became the main seat of the Drikung Kagyu lineage. He taught thousands of disciples, emphasized pure monastic discipline, and spread the Dharma widely.\n\nJigten Sumgön was renowned for his great compassion, wisdom, spiritual realization, and miraculous activities. His teachings were later compiled by his disciple Chenga Sherab Jungne into the famous text called Gongchig.\n\nIn conclusion: Kyobpa Jigten Sumgön was a great Buddhist master who dedicated his life to benefiting all sentient beings and establishing the Drikung Kagyu lineage, which continues to preserve and spread his teachings.",
+      },
+      {
+        id: "ms2",
+        name: "His Holiness Drikung Kyabgon Chungtsang",
+        tagline: "36th throne holder of the Drikung Kagyu lineage",
+        image: "",
+        bio:
+          "His Holiness Drikung Kyabgon Chungtsang, Tenzin Chökyi Nangwa, is the 36th throne holder of the Drikung Kagyu lineage and the 8th reincarnation of Chungtsang Rinpoche. He is regarded as a manifestation of Manjushri.\n\nHe was born in 1942 in Lhokha, Tibet, into the noble Lhagyari family. In 1946, he was recognized as the reincarnation of the 7th Chungtsang Rinpoche and enthroned at Drikung Thil Monastery. From a young age, he received Buddhist education, teachings, empowerments, and transmissions from eminent Drikung Kagyu masters.\n\nFollowing the Tibetan uprising in 1959, he faced severe hardships and was imprisoned for 23 years, until 1982. During his imprisonment, he endured harsh treatment, re-education, and forced labor. After his release, he served in various government positions related to religious affairs in Tibet.\n\nIn 1985, he was permitted to travel to India, where he reunited with his brothers and visited Drikung Kagyu monasteries in Ladakh. In 1992, he visited Dehradun for the inauguration of Jangchubling Monastery, where he reunited with His Holiness Drikung Kyabgon Chetsang Rinpoche after 26 years. Together, they gave the traditional Monkey Year teachings.\n\nIn conclusion: His Holiness Chungtsang Rinpoche's life reflects great endurance, dedication, and commitment to the preservation of the Drikung Kagyu lineage and Tibetan Buddhist teachings.",
+      },
+      {
+        id: "ms3",
+        name: "His Holiness Drikung Kyabgon Chetsang",
+        tagline: "37th throne holder of the Drikung Kagyu lineage",
+        image: "",
+        bio:
+          "His Holiness Drikung Kyabgon Chetsang, Konchog Tenzin Kunsang Thrinle Lhundrup, is the 37th throne holder of the Drikung Kagyu lineage and the 7th reincarnation of Chetsang Rinpoche. He is regarded as a manifestation of Chenrezig (Avalokiteshvara), the Bodhisattva of Compassion.\n\nHe was born in 1946 in Lhasa, Tibet, into the noble Tsarong family. In 1950, he was recognized as the reincarnation of the previous Drikung Kyabgon and enthroned at Drikung Thil Monastery. From an early age, he received extensive Buddhist education and teachings from eminent masters of the Drikung Kagyu tradition.\n\nDuring the Cultural Revolution, he experienced great hardship, forced labor, and difficult living conditions. Despite these challenges, he maintained his spiritual discipline and inner strength. In 1975, he successfully escaped Tibet across the Himalayan mountains and reached India. He later returned to India in 1978 to assume responsibility as the head of the Drikung Kagyu lineage.\n\nHis Holiness undertook a traditional three-year meditation retreat at Lamayuru Monastery and received profound teachings from many great Buddhist masters. He was fully ordained as a monk by His Holiness the Dalai Lama in 1985.\n\nWith great dedication, he worked to preserve and revive the Drikung Kagyu lineage. He established the Drikung Kagyu Institute in Dehradun, India, including Jangchubling Monastery and Samtenling Nunnery. He also founded the Songtsen Library in 2003 and Kagyu College in 2005 to preserve Tibetan Buddhist teachings, culture, history, and knowledge.\n\nIn conclusion: His Holiness Drikung Kyabgon Chetsang is a remarkable spiritual leader whose life reflects courage, wisdom, compassion, and dedication. Through his tireless efforts, he has revived the Drikung Kagyu lineage and contributed greatly to the preservation and spread of Tibetan Buddhism throughout the world.",
+      },
+    ],
     leadersHeading: "Our Leadership",
     leadersIntro: "Achi House is guided by a volunteer board elected by our members.",
     leaders: [

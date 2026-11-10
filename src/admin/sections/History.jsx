@@ -4,6 +4,7 @@ import { PageTitle } from "../fields.jsx";
 import { api } from "../../lib/api.js";
 import { relativeTime } from "../../lib/dates.js";
 import { listChanges } from "../../lib/diff.js";
+import { withDefaults } from "../../lib/defaults.js";
 import Modal from "../../components/Modal.jsx";
 
 const KIND = { added: "Added", edited: "Changed", removed: "Removed" };
@@ -16,7 +17,7 @@ function CompareDialog({ item, onClose, onRestore }) {
 
   useEffect(() => {
     api.get(`/api/admin/history/${item.id}`)
-      .then((old) => setChanges(listChanges(draft, old)))
+      .then((old) => setChanges(listChanges(draft, withDefaults(old))))
       .catch((e) => setError(e.message));
   }, [item.id]); // eslint-disable-line
 

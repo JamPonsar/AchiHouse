@@ -35,6 +35,8 @@ const SECTION_FIELDS = {
       missionHeading: "Mission heading", missionText: "Mission text", missionPhoto: "Mission photo",
       spaceHeading: "Space heading", spaceText: "Space description", spacePhotos: "Space photos",
       spaceFeatures: "Space features list", leadersHeading: "Leadership heading", leadersIntro: "Leadership intro",
+      nameHeading: "Name story heading", nameText: "Name story text", nameImage: "Name story picture", nameCaption: "Name story caption",
+      mastersHeading: "Lineage heading", mastersIntro: "Lineage intro",
     },
   },
   booking: {
@@ -73,7 +75,7 @@ function diffList(before = [], after = [], { noun, label, fields, to, path }) {
         if (i > -1) l.splice(i, 1);
       }));
     } else if (!same(prev, item)) {
-      const changed = Object.keys(fields).filter((k) => !same(prev[k], item[k])).map((k) => fields[k]);
+      const changed = [...new Set(Object.keys(fields).filter((k) => !same(prev[k], item[k])).map((k) => fields[k]))];
       out.push(entry(`Edited ${noun} "${label(item)}"${changed.length ? ` (${changed.join(", ")})` : ""}`, to, (d) => {
         const l = listAt(d, path);
         const i = l.findIndex((x) => x.id === item.id);
@@ -212,6 +214,10 @@ export function listChanges(before, after) {
   }
 
   changes.push(
+    ...diffList(before.about?.masters, after.about?.masters, {
+      noun: "lineage master", label: (x) => x.name || "Unnamed", to: "/admin/about", path: ["about", "masters"],
+      fields: { name: "name", tagline: "one-line description", bio: "biography", image: "picture", imageX: "picture framing", imageY: "picture framing", imageZoom: "picture framing" },
+    }),
     ...diffList(before.about?.leaders, after.about?.leaders, {
       noun: "leader", label: (x) => x.name || "Unnamed", to: "/admin/about", path: ["about", "leaders"],
       fields: { name: "name", role: "role", phone: "phone", bio: "bio", photo: "photo" },
