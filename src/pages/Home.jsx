@@ -4,7 +4,7 @@ import Slideshow from "../components/Slideshow.jsx";
 import Text from "../components/Text.jsx";
 import NoUpcoming from "../components/NoUpcoming.jsx";
 import EventModal, { Icon } from "../components/EventModal.jsx";
-import { useContent, photoSrc } from "../lib/content.jsx";
+import { coverStyle, useContent, photoSrc } from "../lib/content.jsx";
 import { formatDate, formatTimeRange, fromKey, sortEvents, todayKey } from "../lib/dates.js";
 
 export default function Home() {
@@ -71,7 +71,7 @@ export default function Home() {
                 const d = fromKey(ev.date);
                 return (
                   <button key={ev.id} className="event-card" onClick={() => setOpenEvent(ev)}>
-                    <div className="event-card-img" style={{ backgroundImage: `url(${photoSrc(content, ev.coverPhoto)})` }}>
+                    <div className="event-card-img cover-framed" style={coverStyle(content, ev)}>
                       <span className="date-badge">
                         <small>{d.toLocaleDateString("en-US", { month: "short" })}</small>
                         {d.getDate()}

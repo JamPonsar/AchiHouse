@@ -38,10 +38,6 @@ export default function ContactEditor() {
           <TextField label="Facebook page link" value={s.facebook} onChange={set("facebook")} placeholder="https://facebook.com/..." />
           <TextField label="Instagram link" value={s.instagram} onChange={set("instagram")} placeholder="https://instagram.com/..." />
         </div>
-        <div className="a-two">
-          <TextField label="Organization name" value={s.orgName} onChange={set("orgName")} />
-          <TextField label="Tagline (under the logo)" value={s.tagline} onChange={set("tagline")} />
-        </div>
         <TextField label="Footer note" value={s.footerNote} onChange={set("footerNote")} />
       </Card>
     </div>

@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { api } from "../lib/api.js";
-import { describeChanges } from "../lib/diff.js";
+import { listChanges } from "../lib/diff.js";
+import { baselineOf } from "../lib/changes.js";
 import { prepareImage } from "./image.js";
 import Modal from "../components/Modal.jsx";
 import Login from "./Login.jsx";
@@ -12,6 +13,7 @@ import EventsEditor from "./sections/EventsEditor.jsx";
 import PhotosEditor from "./sections/PhotosEditor.jsx";
 import BookingEditor from "./sections/BookingEditor.jsx";
 import ContactEditor from "./sections/ContactEditor.jsx";
+import HeaderEditor from "./sections/HeaderEditor.jsx";
 import DonateEditor from "./sections/DonateEditor.jsx";
 import Requests from "./sections/Requests.jsx";
 import History from "./sections/History.jsx";
@@ -20,11 +22,42 @@ import "./admin.css";
 const AdminContext = createContext(null);
 export const useAdmin = () => useContext(AdminContext);
 
-export const newId = (prefix) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+// Used by fieldReset: while this is an array, edit() records what would be written instead of writing
+let probing = null;
+
+// Path segments are property names, array positions, or { id } for list items that have an id
+function getAt(root, path) {
+  let o = root;
+  for (const seg of path) {
+    if (o === undefined || o === null) return undefined;
+    o = typeof seg === "object" ? o.find?.((x) => x.id === seg.id) : o[seg];
+  }
+  return o;
+}
+
+// Run an edit function against a read-only view of the draft, returning the paths it tries to write
+function recordWrites(root, fn) {
+  const writes = [];
+  const wrap = (target, path) => new Proxy(target, {
+    get(t, k, receiver) {
+      const v = Reflect.get(t, k, receiver);
+      if (typeof k === "symbol" || v === null || typeof v !== "object") return v;
+      const seg = Array.isArray(t) && /^\d+$/.test(k) ? (v.id !== undefined ? { id: v.id } : Number(k)) : k;
+      return wrap(v, [...path, seg]);
+    },
+    set(t, k) { writes.push([...path, k]); return true; },
+    deleteProperty(t, k) { writes.push([...path, k]); return true; },
+  });
+  fn(wrap(root, []));
+  return writes;
+}
+
+export const newId =(prefix) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const SECTIONS = [
   { to: "/admin", label: "Start here", icon: "🏠", end: true },
   { group: "Website pages" },
+  { to: "/admin/header", label: "Header & logo", icon: "🏷️" },
   { to: "/admin/home", label: "Home page", icon: "🖼️" },
   { to: "/admin/about", label: "About page", icon: "📖" },
   { to: "/admin/events", label: "Events", icon: "📅" },
@@ -47,6 +80,14 @@ export default function AdminApp() {
   const [newRequests, setNewRequests] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
+  const [restoreUndo, setRestoreUndo] = useState(null); // the draft as it was just before an old version was restored
+  const [highlight, setHighlightState] = useState(() => {
+    try { return localStorage.getItem("achihouse-highlight") !== "off"; } catch { return true; }
+  });
+  const setHighlight = (on) => {
+    setHighlightState(on);
+    try { localStorage.setItem("achihouse-highlight", on ? "on" : "off"); } catch {}
+  };
   const lastSaved = useRef(null);
   const timer = useRef(null);
   const navigate = useNavigate();
@@ -138,7 +179,11 @@ export default function AdminApp() {
   }, [saveState]);
 
   // edit(d => { d.home.heroTitle = "..." })
+  const draftNow = useRef(null);
+  draftNow.current = draft;
   const edit = useCallback((fn) => {
+    // While a field is working out which part of the data it edits (see fieldReset), only record
+    if (probing) { probing.push(...recordWrites(draftNow.current, fn)); return; }
     setDraft((d) => {
       const copy = structuredClone(d);
       fn(copy);
@@ -146,18 +191,67 @@ export default function AdminApp() {
     });
   }, []);
 
-  const uploadPhotos = useCallback(async (files, defaults = {}) => {
+  // For a changed field: returns a function that puts it back to the published value, or null if
+  // there is nothing to go back to (e.g. it belongs to something that is new). Works by running the
+  // field's own onChange against a recorder to learn which part of the data the field edits.
+  const fieldReset = useCallback((onChange) => {
+    if (!published || !draftNow.current) return null;
+    const paths = [];
+    probing = paths;
+    try { onChange(""); } catch { return null; } finally { probing = null; }
+    if (!paths.length || !paths.every((p) => getAt(published, p.slice(0, -1)) !== undefined)) return null;
+    return () => edit((d) => {
+      for (const p of paths) {
+        const parent = getAt(d, p.slice(0, -1));
+        if (parent === undefined) continue;
+        const was = getAt(published, p);
+        if (was === undefined) delete parent[p[p.length - 1]]; else parent[p[p.length - 1]] = structuredClone(was);
+      }
+    });
+  }, [published, edit]);
+
+  // Step 1: resize the chosen files in the browser. Nothing is uploaded or saved yet.
+  const prepareUploads = useCallback(async (files, defaults = {}) => {
+    const items = [];
+    try {
+      for (const file of files) {
+        const { blob, type } = await prepareImage(file);
+        items.push({
+          key: newId("up"), blob, type, preview: URL.createObjectURL(blob),
+          caption: "", eventId: "", album: "", hidden: false, ...defaults,
+        });
+      }
+    } catch (e) {
+      items.forEach((s) => URL.revokeObjectURL(s.preview));
+      throw e;
+    }
+    return items;
+  }, []);
+
+  // Upload a single image on its own (not added to the photo library). Returns its address.
+  const uploadImage = useCallback(async (file) => {
+    const { blob, type } = await prepareImage(file);
+    const { src } = await api.upload(blob, type);
+    return src;
+  }, []);
+
+  // Step 2: after the person confirms, upload and add them to the photo library.
+  const commitUploads = useCallback(async (items) => {
     const created = [];
-    for (const file of files) {
-      const { blob, type } = await prepareImage(file);
-      const { src } = await api.upload(blob, type);
-      created.push({ id: newId("ph"), src, caption: "", eventId: "", album: "", ...defaults });
+    for (const it of items) {
+      const { src } = await api.upload(it.blob, it.type);
+      const photo = { id: newId("ph"), src, caption: it.caption, eventId: it.eventId, album: it.eventId ? "" : it.album };
+      if (it.hidden) photo.hidden = true;
+      created.push(photo);
     }
     edit((d) => { d.photos.unshift(...created); });
     return created.map((p) => p.id);
   }, [edit]);
 
-  const changes = useMemo(() => describeChanges(published, draft), [published, draft]);
+  const changeList = useMemo(() => listChanges(published, draft), [published, draft]);
+  const changes = useMemo(() => changeList.map((c) => c.text), [changeList]);
+  // Everything on the published site, so fields can tell whether they've been changed
+  const baseline = useMemo(() => (published ? baselineOf(published) : null), [published]);
   const hasChanges = useMemo(
     () => !!draft && !!published && JSON.stringify(draft) !== JSON.stringify(published),
     [draft, published]
@@ -175,6 +269,7 @@ export default function AdminApp() {
     setPublished(draft);
     lastSaved.current = JSON.stringify(draft);
     setDialog(null);
+    setRestoreUndo(null);
     showToast("Your changes are now live on the website. 🎉");
   };
 
@@ -185,7 +280,14 @@ export default function AdminApp() {
     setDraft(published);
     setSaveState("saved");
     setDialog(null);
+    setRestoreUndo(null);
     showToast("Unpublished changes were discarded.");
+  };
+
+  const undoRestore = () => {
+    setDraft(restoreUndo.draft); // autosave then stores it again
+    setRestoreUndo(null);
+    showToast("Restore undone. Your previous draft is back.");
   };
 
   const replaceDraft = (data) => {
@@ -214,7 +316,7 @@ export default function AdminApp() {
   }
   if (!draft) return <div className="admin-loading"><span className="loader" /></div>;
 
-  const ctx = { draft, published, edit, uploadPhotos, showToast, hasChanges, changes, replaceDraft, setNewRequests, navigate };
+  const ctx = { draft, published, edit, fieldReset,prepareUploads, commitUploads, uploadImage, showToast, hasChanges, changes, changeList, baseline, highlight, setHighlight, replaceDraft, setRestoreUndo, saveNow, setNewRequests, navigate };
 
   return (
     <AdminContext.Provider value={ctx}>
@@ -228,9 +330,7 @@ export default function AdminApp() {
           <div className={`a-status ${hasChanges ? "has-changes" : ""}`}>
             <SaveIndicator state={saveState} />
             {hasChanges ? (
-              <span className="a-status-text">
-                <b>{changes.length || 1}</b> unpublished change{(changes.length || 1) === 1 ? "" : "s"}
-              </span>
+              <ChangesMenu />
             ) : (
               <span className="a-status-text">Website is up to date</span>
             )}
@@ -248,6 +348,14 @@ export default function AdminApp() {
             </button>
           </div>
         </header>
+
+        {restoreUndo && (
+          <div className="a-undo-bar" role="status">
+            <span>An older version was loaded into your draft. Nothing is live until you publish.</span>
+            <button className="a-btn a-btn-sm" onClick={undoRestore}>↶ Undo restore</button>
+            <button className="a-icon-btn" aria-label="Dismiss" onClick={() => setRestoreUndo(null)}>✕</button>
+          </div>
+        )}
 
         <div className="a-body">
           <nav className={`a-sidebar ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
@@ -276,6 +384,7 @@ export default function AdminApp() {
               <Route path="events/*" element={<EventsEditor />} />
               <Route path="photos" element={<PhotosEditor />} />
               <Route path="booking" element={<BookingEditor />} />
+              <Route path="header" element={<HeaderEditor />} />
               <Route path="contact" element={<ContactEditor />} />
               <Route path="donate" element={<DonateEditor />} />
               <Route path="requests" element={<Requests />} />
@@ -299,6 +408,78 @@ export default function AdminApp() {
         {toast && <div key={toast.id} className={`a-toast a-toast-${toast.kind}`}>{toast.message}</div>}
       </div>
     </AdminContext.Provider>
+  );
+}
+
+// "3 unpublished changes ▾": a list of every change, each linking to where it was made
+function ChangesMenu() {
+  const { changeList, highlight, setHighlight, navigate, edit, showToast } = useAdmin();
+  const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(null);
+
+  // Put one change back to the published version
+  const reset = (c) => {
+    edit((d) => c.revert(d));
+    setConfirming(null);
+    showToast("Put back the way it is on the live website.");
+  };
+  const box = useRef(null);
+  const count = changeList.length || 1;
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (!box.current?.contains(e.target)) { setOpen(false); setConfirming(null); } };
+    const esc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
+  }, [open]);
+
+  const go = (to) => {
+    setOpen(false);
+    navigate(to);
+    // Scroll to the first highlighted thing on that page
+    setTimeout(() => document.querySelector(".a-main .is-changed")?.scrollIntoView({ block: "center", behavior: "smooth" }), 350);
+  };
+
+  return (
+    <div className="a-changes" ref={box}>
+      <button className="a-changes-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="a-status-text"><b>{count}</b> unpublished change{count === 1 ? "" : "s"}</span>
+        <span aria-hidden="true">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <div className="a-changes-panel" role="dialog" aria-label="Unpublished changes">
+          <div className="a-changes-head">
+            <strong>What you've changed</strong>
+            <label className="a-switch">
+              <input type="checkbox" checked={highlight} onChange={(e) => setHighlight(e.target.checked)} />
+              <span>Highlight changes</span>
+            </label>
+          </div>
+          <ul>
+            {changeList.map((c, i) => (
+              <li key={c.text} className="a-change-row">
+                <button className="a-change-item" onClick={() => go(c.to)}>
+                  <span className={`a-change-kind a-change-${c.kind}`}>{{ added: "New", edited: "Edited", removed: "Removed" }[c.kind]}</span>
+                  <span className="a-change-text">{c.text}</span>
+                  <span className="a-change-go" aria-hidden="true">Go →</span>
+                </button>
+                {confirming === i ? (
+                  <span className="a-change-confirm">
+                    <button className="a-btn a-btn-sm a-btn-danger" onClick={() => reset(c)}>Yes, reset</button>
+                    <button className="a-btn a-btn-sm a-btn-quiet" onClick={() => setConfirming(null)}>Cancel</button>
+                  </span>
+                ) : (
+                  <button className="a-btn a-btn-sm a-btn-quiet a-change-reset" title="Put this back the way it is on the live website" onClick={() => setConfirming(i)}>↺ Reset</button>
+                )}
+              </li>
+            ))}
+            {!changeList.length && <li className="a-muted a-change-empty">Small edits</li>}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

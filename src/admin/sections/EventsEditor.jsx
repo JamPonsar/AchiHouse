@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { useAdmin, newId, ConfirmDialog } from "../AdminApp.jsx";
-import { Card, DropZone, Field, PageTitle, PhotoField, PhotoPicker, TextArea, TextField, useUploader } from "../fields.jsx";
+import { Card, CoverField, DropZone, Field, PageTitle, PhotoPicker, TextArea, TextField, useUploader } from "../fields.jsx";
+import { eventCover } from "../../lib/content.jsx";
 import Modal from "../../components/Modal.jsx";
 import { formatDate, formatTimeRange, generateDates, repeatOptions, sortEvents, todayKey } from "../../lib/dates.js";
 
 // Details that are shared by every event in a repeating series
-const SERIES_DETAILS = ["title", "startTime", "endTime", "location", "summary", "description", "coverPhoto"];
+const SERIES_DETAILS = ["title", "startTime", "endTime", "location", "summary", "description", "cover", "coverPhoto", "coverX", "coverY", "coverZoom"];
 const SERIES_MAX = 52;
 
 // A fresh event based on an existing one (details and cover photo are copied;
@@ -31,13 +32,17 @@ export default function EventsEditor() {
 }
 
 function EventList() {
-  const { draft, published, edit, showToast } = useAdmin();
+  const { draft, published, highlight, edit, showToast } = useAdmin();
   const navigate = useNavigate();
   const [tab, setTab] = useState("upcoming");
   const [q, setQ] = useState("");
   const today = todayKey();
   const all = draft.events.filter((e) => e.title.toLowerCase().includes(q.toLowerCase()));
   const list = tab === "upcoming" ? sortEvents(all.filter((e) => e.date >= today)) : sortEvents(all.filter((e) => e.date < today), -1);
+  // Events on the live website that have been deleted from the draft
+  const deleted = !highlight ? [] : published.events.filter((e) =>
+    !draft.events.some((x) => x.id === e.id) && e.title.toLowerCase().includes(q.toLowerCase()) && (tab === "upcoming" ? e.date >= today : e.date < today)
+  );
   const isNew = (ev) => !published.events.some((p) => p.id === ev.id);
   const isEdited = (ev) => {
     const p = published.events.find((x) => x.id === ev.id);
@@ -66,13 +71,13 @@ function EventList() {
       </div>
 
       <div className="a-event-list">
-        {list.length === 0 && <p className="a-empty">No {tab} events{q && " match your search"}.</p>}
+        {list.length === 0 && deleted.length === 0 && <p className="a-empty">No {tab} events{q && " match your search"}.</p>}
         {list.map((ev) => {
-          const cover = draft.photos.find((p) => p.id === ev.coverPhoto);
+          const cover = eventCover(draft, ev);
           const count = draft.photos.filter((p) => p.eventId === ev.id).length;
           return (
-            <Link key={ev.id} to={`/admin/events/${ev.id}`} className="a-event-row">
-              {cover ? <img src={cover.src} alt="" /> : <div className="a-photo-empty">No photo</div>}
+            <Link key={ev.id} to={`/admin/events/${ev.id}`} className={`a-event-row ${highlight && (isNew(ev) || isEdited(ev)) ? "is-changed" : ""}`}>
+              {cover ? <img src={cover} alt="" /> : <div className="a-photo-empty">No photo</div>}
               <div>
                 <strong>{ev.title || "Untitled event"}</strong>
                 <span>{formatDate(ev.date)}{ev.startTime && ` · ${formatTimeRange(ev.startTime, ev.endTime)}`}</span>
@@ -93,6 +98,24 @@ function EventList() {
             </Link>
           );
         })}
+        {deleted.map((ev) => (
+          <div key={ev.id} className="a-event-row is-deleted">
+            {eventCover(published, ev) ? <img src={eventCover(published, ev)} alt="" /> : <div className="a-photo-empty">No photo</div>}
+            <div>
+              <strong>{ev.title || "Untitled event"}</strong>
+              <span>{formatDate(ev.date)}{ev.startTime && ` · ${formatTimeRange(ev.startTime, ev.endTime)}`}</span>
+            </div>
+            <span className="a-pill a-pill-no">Deleted, not published</span>
+            <button
+              type="button"
+              className="a-btn a-btn-sm"
+              title="Bring this event back"
+              onClick={() => { edit((d) => { d.events.push(structuredClone(ev)); }); showToast("Event restored."); }}
+            >
+              ↺ Restore
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -107,7 +130,7 @@ function NewEvent() {
     created.current = true;
     const id = newId("ev");
     edit((d) => {
-      d.events.push({ id, title: "", date: todayKey(), startTime: "", endTime: "", location: "Achi House, Main Hall", summary: "", description: "", coverPhoto: "" });
+      d.events.push({ id, title: "", date: todayKey(), startTime: "", endTime: "", location: "Achi House, Main Hall", summary: "", description: "", cover: "" });
     });
     navigate(`/admin/events/${id}`, { replace: true });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -123,7 +146,7 @@ function EventForm() {
   const [confirmApply, setConfirmApply] = useState(false);
   const [repeatKind, setRepeatKind] = useState("weekly");
   const [repeatCount, setRepeatCount] = useState("8");
-  const [upload, busy] = useUploader({ eventId: id });
+  const [upload, busy, review] = useUploader({ eventId: id });
   const index = draft.events.findIndex((e) => e.id === id);
   const ev = draft.events[index];
 
@@ -138,6 +161,13 @@ function EventForm() {
 
   const set = (k) => (v) => edit((d) => { d.events[index][k] = v; });
   const photos = draft.photos.filter((p) => p.eventId === id);
+  const cover = eventCover(draft, ev);
+  const setCover = (src) => edit((d) => {
+    d.events[index].cover = src;
+    d.events[index].coverPhoto = "";
+    // a new picture starts out centered
+    if (src !== cover) { d.events[index].coverX = 50; d.events[index].coverY = 50; d.events[index].coverZoom = 1; }
+  });
 
   const duplicate = () => {
     const c = copyOf(ev);
@@ -264,8 +294,13 @@ function EventForm() {
         </Card>
       )}
 
-      <Card title="Cover photo" help="The main picture for this event.">
-        <PhotoField value={ev.coverPhoto} onChange={set("coverPhoto")} uploadDefaults={{ eventId: id }} />
+      <Card title="Cover photo" help="The main picture for this event. It's kept separately from your photo library, so deleting a library photo never removes it from the event.">
+        <CoverField
+          value={cover}
+          onChange={setCover}
+          frame={{ x: ev.coverX ?? 50, y: ev.coverY ?? 50, zoom: ev.coverZoom || 1 }}
+          onFrame={(patch) => edit((d) => { Object.assign(d.events[index], patch); })}
+        />
       </Card>
 
       <Card
@@ -274,6 +309,7 @@ function EventForm() {
         actions={<button className="a-btn a-btn-sm" onClick={() => setPicking(true)}>Add from photo library</button>}
       >
         <DropZone busy={busy} onFiles={(files) => upload(files)} />
+        {review}
         <div className="a-photo-grid">
           {photos.map((p) => (
             <div key={p.id} className="a-photo-card">
@@ -285,8 +321,8 @@ function EventForm() {
                 onChange={(e) => edit((d) => { d.photos.find((x) => x.id === p.id).caption = e.target.value; })}
               />
               <div className="a-photo-card-actions">
-                {ev.coverPhoto !== p.id ? (
-                  <button className="a-link-btn" onClick={() => set("coverPhoto")(p.id)}>Make cover</button>
+                {cover !== p.src ? (
+                  <button className="a-link-btn" onClick={() => setCover(p.src)}>Make cover</button>
                 ) : (
                   <span className="a-pill">Cover photo</span>
                 )}

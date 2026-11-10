@@ -3,17 +3,17 @@ import Modal from "./Modal.jsx";
 import Lightbox from "./Lightbox.jsx";
 import Text from "./Text.jsx";
 import { formatDate, formatTimeRange, icsFor, todayKey } from "../lib/dates.js";
-import { photoSrc } from "../lib/content.jsx";
+import { coverStyle, eventCover, galleryPhotos } from "../lib/content.jsx";
 
 export default function EventModal({ event, content, onClose }) {
   const [lightbox, setLightbox] = useState(null);
-  const photos = content.photos.filter((p) => p.eventId === event.id);
-  const cover = photoSrc(content, event.coverPhoto) || photos[0]?.src;
+  const photos = galleryPhotos(content).filter((p) => p.eventId === event.id);
+  const cover = eventCover(content, event) || photos[0]?.src;
   const upcoming = event.date >= todayKey();
 
   return (
     <Modal onClose={onClose} className="event-modal" label={event.title}>
-      {cover && <div className="event-modal-cover" style={{ backgroundImage: `url(${cover})` }} />}
+      {cover && <div className="event-modal-cover cover-framed" style={coverStyle(content, event, cover)} />}
       <div className="event-modal-body">
         <span className={`tag ${upcoming ? "tag-upcoming" : ""}`}>{upcoming ? "Upcoming" : "Past event"}</span>
         <h2>{event.title}</h2>

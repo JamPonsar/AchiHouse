@@ -383,3 +383,17 @@ button { font: inherit; color: inherit; }
 .empty-events { background: var(--paper); border: 1px dashed #d9c7a5; border-radius: var(--radius); padding: 28px 24px; text-align: center; }
 .empty-events strong { font-family: var(--serif); font-size: 1.25rem; font-weight: 500; }
 .empty-events p { margin: .4em 0 0; color: var(--muted); }
+
+/* Preview: highlight what's new or edited (turned on and off from the preview banner) */
+.preview-banner .preview-toggle { background: transparent; color: #fff; border: 1px solid rgba(255, 255, 255, .6); }
+.preview-banner .preview-toggle.on { background: #ffd60a; color: #1f2d4a; border-color: #ffd60a; }
+[data-changed="text"] { background: rgba(255, 214, 10, .5); box-shadow: 0 0 0 3px rgba(255, 214, 10, .5); border-radius: 3px; }
+[data-changed="block"] { outline: 3px dashed #e0a800; outline-offset: 4px; }
+[data-changed="img"] { outline: 5px solid #ffd60a; outline-offset: -5px; }
+.event-row-deleted { opacity: .65; background: repeating-linear-gradient(135deg, #fdf0ee, #fdf0ee 10px, #fbe4e0 10px, #fbe4e0 20px); border: 2px dashed #d9776b; cursor: default; }
+.event-row-deleted h3 { text-decoration: line-through; }
+.tag-deleted { background: #b42318; color: #fff; }
+
+/* Event pictures that can be moved and zoomed (see coverStyle) */
+.cover-framed { position: relative; overflow: hidden; }
+.cover-framed::before { content: ""; position: absolute; inset: 0; background: var(--cover, none) var(--cover-pos, 50% 50%) / cover no-repeat; transform: scale(var(--cover-zoom, 1)); transform-origin: var(--cover-pos, 50% 50%); }

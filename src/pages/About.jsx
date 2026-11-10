@@ -14,7 +14,7 @@ export default function About() {
 
   return (
     <>
-      <PageHeader title="About Us" intro={content.settings.tagline} image={photoSrc(content, "ph27")} />
+      <PageHeader title={content.settings.navAbout?.trim() || "About Us"} intro={content.settings.tagline} image={photoSrc(content, "ph27")} />
 
       <section className="section">
         <div className="container split">

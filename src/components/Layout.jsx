@@ -1,22 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useContent, exitPreview } from "../lib/content.jsx";
 import Text from "./Text.jsx";
 import Phones from "./Phones.jsx";
+import LogoMark from "./LogoMark.jsx";
+import ChangeHighlighter, { countChanges } from "./ChangeHighlighter.jsx";
 
+// `key` is the setting that can rename the link (see "Header & logo" in the editor)
 export const NAV = [
-  { to: "/", label: "Home" },
-  { to: "/about", label: "About" },
-  { to: "/events", label: "Events" },
-  { to: "/photos", label: "Photos" },
-  { to: "/book", label: "Renting" },
-  { to: "/contact", label: "Contact" },
+  { to: "/", label: "Home", key: "navHome" },
+  { to: "/about", label: "About", key: "navAbout" },
+  { to: "/events", label: "Events", key: "navEvents" },
+  { to: "/photos", label: "Photos", key: "navPhotos" },
+  { to: "/book", label: "Renting", key: "navBook" },
+  { to: "/contact", label: "Contact", key: "navContact" },
 ];
+const nameOf = (settings, n) => (settings[n.key] || "").trim() || n.label;
 
-export function Logo({ name, tagline }) {
+export function Logo({ settings }) {
+  const { orgName: name, tagline } = settings;
   return (
     <span className="logo">
-      <img src="/logo.png" className="logo-mark" alt="" width="46" height="46" />
+      <LogoMark settings={settings} />
       <span className="logo-text">
         <strong>{name}</strong>
         <small>{tagline}</small>
@@ -26,10 +31,23 @@ export function Logo({ name, tagline }) {
 }
 
 export default function Layout() {
-  const { content, preview } = useContent();
+  const { content, preview, published, compare, showChanges, toggleChanges } = useContent();
   const { settings } = content;
   const [open, setOpen] = useState(false);
+  const changeCount = useMemo(
+    () => (preview
+      ? countChanges(published, content) + (published?.events || []).filter((e) => !content.events.some((x) => x.id === e.id)).length
+      : 0),
+    [preview, published, content]
+  );
   const location = useLocation();
+
+  // Browser tab: title and icon follow the name and logo
+  useEffect(() => {
+    if (preview) return;
+    document.title = [settings.orgName, settings.tagline].filter(Boolean).join(" · ");
+    if (settings.logoSrc) document.querySelector('link[rel="icon"]')?.setAttribute("href", settings.logoSrc);
+  }, [preview, settings.orgName, settings.tagline, settings.logoSrc]);
 
   useEffect(() => {
     setOpen(false);
@@ -40,21 +58,33 @@ export default function Layout() {
     <div className="site">
       {preview && (
         <div className="preview-banner">
-          Preview: you're seeing <strong>unpublished changes</strong>. Visitors can't see these yet.
+          {compare ? (
+            <>
+              Comparing: you're seeing the <strong>older version{compare.at ? ` from ${new Date(compare.at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}` : ""}</strong>. Highlights show where it differs from your current version.
+            </>
+          ) : (
+            <>Preview: you're seeing <strong>unpublished changes</strong>. Visitors can't see these yet.</>
+          )}
+          {changeCount > 0 && (
+            <button className={`preview-toggle ${showChanges ? "on" : ""}`} onClick={toggleChanges} aria-pressed={showChanges}>
+              {showChanges ? "✓ Showing changes" : "Show changes"}
+            </button>
+          )}
           <button onClick={exitPreview}>Exit preview</button>
         </div>
       )}
+      {preview && <ChangeHighlighter published={published} draft={content} enabled={showChanges} />}
       <header className="site-header">
         <div className="container header-inner">
-          <Link to="/" className="logo-link"><Logo name={settings.orgName} tagline={settings.tagline} /></Link>
+          <Link to="/" className="logo-link"><Logo settings={settings} /></Link>
           <button className="menu-toggle" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Menu">
             <span /><span /><span />
           </button>
           <nav className={`main-nav ${open ? "open" : ""}`}>
             {NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} end={n.to === "/"}>{n.label}</NavLink>
+              <NavLink key={n.to} to={n.to} end={n.to === "/"}>{nameOf(settings, n)}</NavLink>
             ))}
-            <NavLink to="/donate" className="btn btn-gold nav-donate">Donate</NavLink>
+            <NavLink to="/donate" className="btn btn-gold nav-donate">{(settings.navDonate || "").trim() || "Donate"}</NavLink>
           </nav>
         </div>
       </header>
@@ -66,7 +96,7 @@ export default function Layout() {
         <div className="prayer-flags" aria-hidden="true"><span /><span /><span /><span /><span /></div>
         <div className="container footer-grid">
           <div>
-            <Logo name={settings.orgName} tagline={settings.tagline} />
+            <Logo settings={settings} />
             <p className="footer-note">{settings.footerNote}</p>
           </div>
           <div>
@@ -85,8 +115,8 @@ export default function Layout() {
           <div>
             <h4>Explore</h4>
             <ul className="footer-links">
-              {NAV.slice(1).map((n) => <li key={n.to}><Link to={n.to}>{n.label}</Link></li>)}
-              <li><Link to="/donate">Donate</Link></li>
+              {NAV.slice(1).map((n) => <li key={n.to}><Link to={n.to}>{nameOf(settings, n)}</Link></li>)}
+              <li><Link to="/donate">{(settings.navDonate || "").trim() || "Donate"}</Link></li>
             </ul>
           </div>
         </div>
