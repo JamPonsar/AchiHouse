@@ -5,14 +5,14 @@ import Text from "../components/Text.jsx";
 import NoUpcoming from "../components/NoUpcoming.jsx";
 import EventModal, { Icon } from "../components/EventModal.jsx";
 import { coverStyle, useContent, photoSrc } from "../lib/content.jsx";
-import { formatDate, formatTimeRange, fromKey, sortEvents, todayKey } from "../lib/dates.js";
+import { eventEnd, eventShortWhen, fromKey, sortEvents, todayKey } from "../lib/dates.js";
 
 export default function Home() {
   const { content } = useContent();
   const { home } = content;
   const [openEvent, setOpenEvent] = useState(null);
   const slides = home.slides.map((id) => photoSrc(content, id)).filter(Boolean);
-  const upcoming = sortEvents(content.events.filter((e) => e.date >= todayKey())).slice(0, 3);
+  const upcoming = sortEvents(content.events.filter((e) => eventEnd(e) >= todayKey())).slice(0, 3);
 
   return (
     <>
@@ -79,7 +79,7 @@ export default function Home() {
                     </div>
                     <div className="event-card-body">
                       <h3>{ev.title}</h3>
-                      <p className="event-card-meta"><Icon name="clock" />{formatDate(ev.date, { weekday: "short", month: "short", day: "numeric" })} · {formatTimeRange(ev.startTime, ev.endTime)}</p>
+                      <p className="event-card-meta"><Icon name="clock" />{eventShortWhen(ev)}</p>
                       <p>{ev.summary}</p>
                     </div>
                   </button>

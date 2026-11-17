@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { useAdmin } from "../AdminApp.jsx";
 import { Card } from "../fields.jsx";
-import { todayKey } from "../../lib/dates.js";
+import { eventEnd, todayKey } from "../../lib/dates.js";
 
 export default function Dashboard({ newRequests, onPublish }) {
   const { draft, hasChanges, changes } = useAdmin();
-  const upcoming = draft.events.filter((e) => e.date >= todayKey()).length;
+  const upcoming = draft.events.filter((e) => eventEnd(e) >= todayKey()).length;
 
   return (
     <div className="a-page">

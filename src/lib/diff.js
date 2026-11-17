@@ -8,7 +8,7 @@ const SECTION_FIELDS = {
     page: "Header & logo", to: "/admin/header", from: "settings",
     fields: {
       orgName: "Organization name", tagline: "Tagline",
-      logoSrc: "Logo", logoZoom: "Logo", logoX: "Logo", logoY: "Logo",
+      banners: "Page banner photos", logoSrc: "Logo", logoZoom: "Logo", logoX: "Logo", logoY: "Logo",
       navHome: "Menu names", navAbout: "Menu names", navEvents: "Menu names", navPhotos: "Menu names",
       navBook: "Menu names", navContact: "Menu names", navDonate: "Menu names",
     },
@@ -41,7 +41,7 @@ const SECTION_FIELDS = {
   },
   booking: {
     page: "Renting page", to: "/admin/booking",
-    fields: { heading: "Heading", intro: "Intro text", details: "Details list", pricing: "Rental rates", blockedDates: "Unavailable dates" },
+    fields: { heading: "Heading", intro: "Intro text", details: "Details list", pricing: "Rental rates", blockedDates: "Unavailable dates", blockedTimes: "Unavailable hours" },
   },
   contact: { page: "Contact page", to: "/admin/contact", fields: { heading: "Heading", intro: "Intro text" } },
   donate: {
@@ -103,7 +103,7 @@ function diffList(before = [], after = [], { noun, label, fields, to, path }) {
 
 const EVENT_FIELDS = {
   title: "title", date: "date", startTime: "start time", endTime: "end time", location: "location",
-  summary: "short summary", description: "description", cover: "cover photo", coverPhoto: "cover photo", coverX: "cover framing", coverY: "cover framing", coverZoom: "cover framing",
+  summary: "short summary", color: "calendar color", endDate: "end date", allDay: "all-day setting", blocksRental: "Renting calendar setting", description: "description", cover: "cover photo", coverPhoto: "cover photo", coverX: "cover framing", coverY: "cover framing", coverZoom: "cover framing",
 };
 const titleOf = (e) => e.title || "Untitled";
 const shortDate = (k) => formatDate(k, { month: "short", day: "numeric" });
@@ -290,6 +290,18 @@ export function listChanges(before, after) {
   }
 
   return changes;
+}
+
+// True when two versions of the site are really the same: ignores the order the
+// details are stored in, and the order of events (they're shown sorted by date).
+const canonical = (v) =>
+  Array.isArray(v) ? v.map(canonical)
+  : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().filter((k) => v[k] !== undefined).map((k) => [k, canonical(v[k])]))
+  : v;
+export function sameContent(a, b) {
+  if (!a || !b) return a === b;
+  const norm = (c) => ({ ...c, events: [...(c.events || [])].sort((x, y) => String(x.id).localeCompare(String(y.id))) });
+  return JSON.stringify(canonical(norm(a))) === JSON.stringify(canonical(norm(b)));
 }
 
 // Just the sentences (what gets saved in the edit history)

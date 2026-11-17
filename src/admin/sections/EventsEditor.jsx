@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
-import { useAdmin, newId, ConfirmDialog } from "../AdminApp.jsx";
+import { Link, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { AdminContext, useAdmin, newId, ConfirmDialog } from "../AdminApp.jsx";
 import { Card, CoverField, DropZone, Field, PageTitle, PhotoPicker, TextArea, TextField, useUploader } from "../fields.jsx";
+import { EVENT_COLORS } from "../../lib/colors.js";
 import { eventCover } from "../../lib/content.jsx";
 import Modal from "../../components/Modal.jsx";
-import { formatDate, formatTimeRange, generateDates, repeatOptions, sortEvents, todayKey } from "../../lib/dates.js";
+import { addDays, daysBetween, eventEnd, eventWhen, formatDate, generateDates, isMultiDay, repeatOptions, sortEvents, todayKey } from "../../lib/dates.js";
 
 // Details that are shared by every event in a repeating series
-const SERIES_DETAILS = ["title", "startTime", "endTime", "location", "summary", "description", "cover", "coverPhoto", "coverX", "coverY", "coverZoom"];
+const SERIES_DETAILS = ["title", "startTime", "endTime", "location", "summary", "description", "color", "allDay", "blocksRental", "cover", "coverPhoto", "coverX", "coverY", "coverZoom"];
 const SERIES_MAX = 52;
 
 // A fresh event based on an existing one (details and cover photo are copied;
@@ -15,8 +16,13 @@ const SERIES_MAX = 52;
 function copyOf(ev) {
   const { id, seriesId, ...rest } = structuredClone(ev); // eslint-disable-line no-unused-vars
   const today = todayKey();
-  return { ...rest, id: newId("ev"), date: ev.date < today ? today : ev.date };
+  const date = ev.date < today ? today : ev.date;
+  const copy = { ...rest, id: newId("ev"), date };
+  if (isMultiDay(ev)) copy.endDate = addDays(date, daysBetween(ev.date, eventEnd(ev)));
+  return copy;
 }
+
+const whenText = (ev) => { const w = eventWhen(ev); return w.time ? `${w.date} · ${w.time}` : w.date; };
 
 const seriesOf = (events, ev) =>
   ev.seriesId ? sortEvents(events.filter((e) => e.seriesId === ev.seriesId)) : [];
@@ -38,10 +44,10 @@ function EventList() {
   const [q, setQ] = useState("");
   const today = todayKey();
   const all = draft.events.filter((e) => e.title.toLowerCase().includes(q.toLowerCase()));
-  const list = tab === "upcoming" ? sortEvents(all.filter((e) => e.date >= today)) : sortEvents(all.filter((e) => e.date < today), -1);
+  const list = tab === "upcoming" ? sortEvents(all.filter((e) => eventEnd(e) >= today)) : sortEvents(all.filter((e) => eventEnd(e) < today), -1);
   // Events on the live website that have been deleted from the draft
   const deleted = !highlight ? [] : published.events.filter((e) =>
-    !draft.events.some((x) => x.id === e.id) && e.title.toLowerCase().includes(q.toLowerCase()) && (tab === "upcoming" ? e.date >= today : e.date < today)
+    !draft.events.some((x) => x.id === e.id) && e.title.toLowerCase().includes(q.toLowerCase()) && (tab === "upcoming" ? eventEnd(e) >= today : eventEnd(e) < today)
   );
   const isNew = (ev) => !published.events.some((p) => p.id === ev.id);
   const isEdited = (ev) => {
@@ -50,10 +56,7 @@ function EventList() {
   };
 
   const copy = (ev) => {
-    const c = copyOf(ev);
-    edit((d) => { d.events.push(c); });
-    showToast("Event copied. Now choose the new date and check the details.");
-    navigate(`/admin/events/${c.id}`);
+    navigate("/admin/events/new", { state: { copyFrom: ev.id } });
   };
 
   return (
@@ -64,8 +67,8 @@ function EventList() {
 
       <div className="a-toolbar">
         <div className="a-tabs">
-          <button className={tab === "upcoming" ? "active" : ""} onClick={() => setTab("upcoming")}>Upcoming ({draft.events.filter((e) => e.date >= today).length})</button>
-          <button className={tab === "past" ? "active" : ""} onClick={() => setTab("past")}>Past ({draft.events.filter((e) => e.date < today).length})</button>
+          <button className={tab === "upcoming" ? "active" : ""} onClick={() => setTab("upcoming")}>Upcoming ({draft.events.filter((e) => eventEnd(e) >= today).length})</button>
+          <button className={tab === "past" ? "active" : ""} onClick={() => setTab("past")}>Past ({draft.events.filter((e) => eventEnd(e) < today).length})</button>
         </div>
         <input className="a-input a-search" placeholder="🔍 Search events" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
@@ -80,7 +83,7 @@ function EventList() {
               {cover ? <img src={cover} alt="" /> : <div className="a-photo-empty">No photo</div>}
               <div>
                 <strong>{ev.title || "Untitled event"}</strong>
-                <span>{formatDate(ev.date)}{ev.startTime && ` · ${formatTimeRange(ev.startTime, ev.endTime)}`}</span>
+                <span>{whenText(ev)}</span>
                 <span className="a-muted">{count} photo{count === 1 ? "" : "s"}</span>
               </div>
               {ev.seriesId && <span className="a-pill" title="Part of a repeating series">↻ Repeats</span>}
@@ -103,7 +106,7 @@ function EventList() {
             {eventCover(published, ev) ? <img src={eventCover(published, ev)} alt="" /> : <div className="a-photo-empty">No photo</div>}
             <div>
               <strong>{ev.title || "Untitled event"}</strong>
-              <span>{formatDate(ev.date)}{ev.startTime && ` · ${formatTimeRange(ev.startTime, ev.endTime)}`}</span>
+              <span>{whenText(ev)}</span>
             </div>
             <span className="a-pill a-pill-no">Deleted, not published</span>
             <button
@@ -121,20 +124,172 @@ function EventList() {
   );
 }
 
+// "Add new event": nothing is added to the website draft until "Save event" is clicked.
 function NewEvent() {
-  const { edit } = useAdmin();
+  const admin = useAdmin();
+  // A brand-new event has no live version, so the "Changed / Reset" tags are switched off here
+  // (Reset works by calling each field's change handler, which would clear this form's boxes).
+  return (
+    <AdminContext.Provider value={{ ...admin, highlight: false }}>
+      <NewEventForm />
+    </AdminContext.Provider>
+  );
+}
+
+function NewEventForm() {
+  const { draft, edit, showToast } = useAdmin();
   const navigate = useNavigate();
-  const created = useRef(false);
-  useEffect(() => {
-    if (created.current) return;
-    created.current = true;
-    const id = newId("ev");
-    edit((d) => {
-      d.events.push({ id, title: "", date: todayKey(), startTime: "", endTime: "", location: "Achi House, Main Hall", summary: "", description: "", cover: "" });
-    });
-    navigate(`/admin/events/${id}`, { replace: true });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  return null;
+  const location = useLocation();
+  const [ev, setEv] = useState(() => {
+    const source = draft.events.find((e) => e.id === location.state?.copyFrom);
+    return source
+      ? copyOf(source)
+      : { id: newId("ev"), title: "", date: todayKey(), startTime: "", endTime: "", location: "Achi House, Main Hall", summary: "", description: "", cover: "", blocksRental: true };
+  });
+  const set = (k) => (v) => setEv((e) => ({ ...e, [k]: v }));
+  const cover = ev.cover || "";
+  const save = () => {
+    edit((d) => { d.events.push(ev); });
+    showToast("Event added. It's saved as a draft until you publish.");
+    navigate(`/admin/events/${ev.id}`, { replace: true });
+  };
+  const dirty = ev.title.trim() || ev.summary.trim() || ev.description.trim() || ev.cover;
+
+  return (
+    <div className="a-page">
+      <Link
+        to="/admin/events"
+        className="a-back"
+        onClick={(e) => { if (dirty && !window.confirm("Leave without adding this event? It hasn't been saved.")) e.preventDefault(); }}
+      >← All events</Link>
+      <PageTitle title="Add a new event" intro="Fill in the details, then click “Save event” at the bottom. Nothing is added until you do. Repeating dates and event photos can be added right after saving." />
+
+      <DetailsCard ev={ev} set={set} />
+
+      <Card title="Cover photo" help="The main picture for this event.">
+        <CoverField
+          value={cover}
+          onChange={(src) => setEv((e) => ({ ...e, cover: src, coverPhoto: "", coverX: 50, coverY: 50, coverZoom: 1 }))}
+          frame={{ x: ev.coverX ?? 50, y: ev.coverY ?? 50, zoom: ev.coverZoom || 1 }}
+          onFrame={(patch) => setEv((e) => ({ ...e, ...patch }))}
+        />
+      </Card>
+
+      <div className="a-save-bar">
+        <button className="a-btn a-btn-quiet" onClick={() => navigate("/admin/events")}>Cancel</button>
+        <button className="a-btn a-btn-primary a-btn-lg" onClick={save} disabled={!ev.title.trim() || !ev.date}>✓ Save event</button>
+        {!ev.title.trim() && <span className="a-warn">Give the event a name to save it.</span>}
+      </div>
+    </div>
+  );
+}
+
+const toMin = (t) => (/^\d{1,2}:\d{2}/.test(t || "") ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)) : null);
+const fromMin = (n) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+
+// A time box that saves what you picked when you press Enter or click away,
+// as well as as soon as a complete time (hour, minutes and AM/PM) has been entered.
+// Clicking anywhere on a date / time box opens its picker (not just the little icon)
+const openPicker = (e) => { try { e.currentTarget.showPicker?.(); } catch { /* not supported or not allowed: typing still works */ } };
+
+function TimeField({ label, value, onChange }) {
+  const [text, setText] = useState(value || "");
+  const focused = useRef(false);
+  const ref = useRef(null);
+  // follow outside changes (e.g. the end time moving with the start time)
+  useEffect(() => { if (!focused.current) setText(value || ""); }, [value]);
+  const commit = (v) => { if (v !== (value || "")) onChange(v); };
+  return (
+    <Field label={label}>
+      <input
+        ref={ref}
+        className="a-input"
+        type="time"
+        value={text}
+        onClick={openPicker}
+        onFocus={() => { focused.current = true; }}
+        onChange={(e) => { setText(e.target.value); if (e.target.value) commit(e.target.value); }}
+        onBlur={(e) => { focused.current = false; setText(e.target.value); commit(e.target.value); }}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(e.currentTarget.value); } }}
+      />
+    </Field>
+  );
+}
+
+function DetailsCard({ ev, set }) {
+  // Like Google Calendar: moving the start time moves the end time too, keeping the same length
+  const changeStart = (value) => {
+    const oldStart = toMin(ev.startTime), oldEnd = toMin(ev.endTime), newStart = toMin(value);
+    set("startTime")(value);
+    if (oldStart !== null && oldEnd !== null && newStart !== null && oldEnd > oldStart) {
+      set("endTime")(fromMin(Math.min(newStart + (oldEnd - oldStart), 23 * 60 + 59)));
+    }
+  };
+  // Like Google Calendar: moving the start date moves the end date too, keeping the same length
+  const changeDate = (value) => {
+    if (!value) return;
+    set("date")(value);
+    if (isMultiDay(ev)) set("endDate")(addDays(value, daysBetween(ev.date, eventEnd(ev))));
+  };
+  const changeEndDate = (value) => {
+    if (!value || value <= ev.date) set("endDate")("");
+    else set("endDate")(value);
+  };
+  return (
+    <Card title="Event details">
+        <TextField label="Event name *" value={ev.title} onChange={set("title")} placeholder="e.g. Losar Celebration" autoFocus={!ev.title} />
+        {!ev.title && <p className="a-warn">Please give the event a name.</p>}
+        <label className="a-tick">
+          <input type="checkbox" checked={!!ev.allDay} onChange={(e) => set("allDay")(e.target.checked)} />
+          <span>All-day event <em>(no start or end time, like a holiday)</em></span>
+        </label>
+        <div className="a-when">
+          <div className="a-when-row">
+            <TextField label="Starts *" type="date" value={ev.date} onChange={changeDate} onClick={openPicker} />
+            {!ev.allDay && <TimeField label="Start time" value={ev.startTime} onChange={changeStart} />}
+          </div>
+          <div className="a-when-row">
+            <TextField label="Ends" type="date" min={ev.date} value={eventEnd(ev)} onChange={changeEndDate} onClick={openPicker} />
+            {!ev.allDay && <TimeField label="End time" value={ev.endTime} onChange={set("endTime")} />}
+          </div>
+        </div>
+        <p className="a-muted a-when-note">
+          {isMultiDay(ev)
+            ? `This event lasts ${daysBetween(ev.date, eventEnd(ev)) + 1} days. It shows on every day from the start to the end date.`
+            : "For an event that runs over several days, choose a later end date."}
+        </p>
+        {!ev.allDay && !isMultiDay(ev) && ev.startTime && ev.endTime && ev.endTime <= ev.startTime && (
+          <p className="a-warn">The end time is before the start time. If it ends after midnight, choose the next day as the end date.</p>
+        )}
+        <label className="a-tick">
+          <input type="checkbox" checked={ev.blocksRental !== false} onChange={(e) => set("blocksRental")(e.target.checked)} />
+          <span>Cancel this time on the Renting calendar <em>(recommended). Untick this for things like a birthday or holiday that you want to show, but that shouldn't stop anyone from renting the space.</em></span>
+        </label>
+        <TextField label="Location" value={ev.location} onChange={set("location")} />
+        <Field label="Color on the calendar" help="Pick a color to help different kinds of events stand out (for example classes in green, prayers in blue).">
+          <div className="a-swatches">
+            {EVENT_COLORS.map((c) => (
+              <button
+                key={c.value || "default"}
+                type="button"
+                className={`a-swatch ${(ev.color || "") === c.value ? "on" : ""}`}
+                style={{ background: c.hex }}
+                title={c.name}
+                aria-label={c.name}
+                aria-pressed={(ev.color || "") === c.value}
+                onClick={() => set("color")(c.value)}
+              />
+            ))}
+            <label className="a-swatch-custom" title="Choose any color">
+              <input type="color" value={ev.color || "#8e1b1b"} onChange={(e) => set("color")(e.target.value)} />
+              Custom
+            </label>
+          </div>
+        </Field>
+        <TextArea label="Short summary" help="One sentence, shown in event lists." rows={2} paragraphs={false} value={ev.summary} onChange={set("summary")} />
+        <TextArea label="Full description" help="Shown when someone clicks the event. Tip: leave an empty line between paragraphs." rows={7} value={ev.description} onChange={set("description")} />
+    </Card>
+  );
 }
 
 function EventForm() {
@@ -170,10 +325,7 @@ function EventForm() {
   });
 
   const duplicate = () => {
-    const c = copyOf(ev);
-    edit((d) => { d.events.push(c); });
-    showToast("Event copied. Now choose the new date and check the details.");
-    navigate(`/admin/events/${c.id}`);
+    navigate("/admin/events/new", { state: { copyFrom: ev.id } });
   };
 
   // Repeating events
@@ -190,7 +342,9 @@ function EventForm() {
       const base = d.events[index];
       base.seriesId = seriesId;
       newDates.forEach((date) => {
-        d.events.push({ ...structuredClone(base), id: newId("ev"), date, seriesId });
+        const copy = { ...structuredClone(base), id: newId("ev"), date, seriesId };
+        if (isMultiDay(base)) copy.endDate = addDays(date, daysBetween(base.date, eventEnd(base)));
+        d.events.push(copy);
       });
     });
     showToast(`Created ${newDates.length} more events. They're saved as a draft until you publish.`);
@@ -200,8 +354,9 @@ function EventForm() {
     edit((d) => {
       const source = d.events[index];
       d.events.forEach((e) => {
-        if (e.seriesId === source.seriesId && e.id !== source.id && e.date >= todayKey()) {
+        if (e.seriesId === source.seriesId && e.id !== source.id && eventEnd(e) >= todayKey()) {
           SERIES_DETAILS.forEach((k) => { e[k] = source[k]; });
+          e.endDate = isMultiDay(source) ? addDays(e.date, daysBetween(source.date, eventEnd(source))) : "";
         }
       });
     });
@@ -226,18 +381,7 @@ function EventForm() {
         <button className="a-btn a-btn-quiet a-danger-text" onClick={() => setConfirmDelete(true)}>🗑 Delete event</button>
       </PageTitle>
 
-      <Card title="Event details">
-        <TextField label="Event name *" value={ev.title} onChange={set("title")} placeholder="e.g. Losar Celebration" autoFocus={!ev.title} />
-        {!ev.title && <p className="a-warn">Please give the event a name.</p>}
-        <div className="a-three">
-          <TextField label="Date *" type="date" value={ev.date} onChange={set("date")} />
-          <TextField label="Start time" type="time" value={ev.startTime} onChange={set("startTime")} />
-          <TextField label="End time" type="time" value={ev.endTime} onChange={set("endTime")} />
-        </div>
-        <TextField label="Location" value={ev.location} onChange={set("location")} />
-        <TextArea label="Short summary" help="One sentence, shown in event lists." rows={2} paragraphs={false} value={ev.summary} onChange={set("summary")} />
-        <TextArea label="Full description" help="Shown when someone clicks the event. Tip: leave an empty line between paragraphs." rows={7} value={ev.description} onChange={set("description")} />
-      </Card>
+      <DetailsCard ev={ev} set={set} />
 
       {!ev.seriesId ? (
         <Card

@@ -2,14 +2,15 @@ import { useState } from "react";
 import Modal from "./Modal.jsx";
 import Lightbox from "./Lightbox.jsx";
 import Text from "./Text.jsx";
-import { formatDate, formatTimeRange, icsFor, todayKey } from "../lib/dates.js";
+import { eventEnd, eventWhen, icsFor, todayKey } from "../lib/dates.js";
 import { coverStyle, eventCover, galleryPhotos } from "../lib/content.jsx";
 
 export default function EventModal({ event, content, onClose }) {
   const [lightbox, setLightbox] = useState(null);
   const photos = galleryPhotos(content).filter((p) => p.eventId === event.id);
   const cover = eventCover(content, event) || photos[0]?.src;
-  const upcoming = event.date >= todayKey();
+  const upcoming = eventEnd(event) >= todayKey();
+  const when = eventWhen(event);
 
   return (
     <Modal onClose={onClose} className="event-modal" label={event.title}>
@@ -18,8 +19,8 @@ export default function EventModal({ event, content, onClose }) {
         <span className={`tag ${upcoming ? "tag-upcoming" : ""}`}>{upcoming ? "Upcoming" : "Past event"}</span>
         <h2>{event.title}</h2>
         <ul className="event-meta">
-          <li><Icon name="calendar" />{formatDate(event.date)}</li>
-          {event.startTime && <li><Icon name="clock" />{formatTimeRange(event.startTime, event.endTime)}</li>}
+          <li><Icon name="calendar" />{when.date}</li>
+          {when.time && <li><Icon name="clock" />{when.time}</li>}
           {event.location && <li><Icon name="pin" />{event.location}</li>}
         </ul>
         <Text className="prose">{event.description || event.summary}</Text>

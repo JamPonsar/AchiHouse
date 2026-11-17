@@ -274,10 +274,14 @@ export const seedContent = {
         "Rental periods include set-up and clean-up time.",
         "Special pricing is available for religious activities and multi-day rentals.",
       ],
+      customTitle: "Need different hours?",
+      customText:
+        "Our rates are for the time periods listed above. If you would like to rent for hours that fall between two rates (for example 9am – 7pm), please call or message us and we can easily work out an arrangement.",
       hourlyTitle: "Hourly Rental",
       hourlyText: "First hour $200. Each additional hour adds $100.",
     },
     blockedDates: [],
+    blockedTimes: [],
   },
   contact: {
     heading: "Contact Us",

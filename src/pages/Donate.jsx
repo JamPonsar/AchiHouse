@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Text from "../components/Text.jsx";
 import { Icon } from "../components/EventModal.jsx";
+import { bannerFor } from "../lib/banners.js";
 import PageHeader from "./PageHeader.jsx";
 import { useContent, photoSrc } from "../lib/content.jsx";
 
@@ -27,7 +28,7 @@ export default function Donate() {
 
   return (
     <>
-      <PageHeader title={donate.heading} image={photoSrc(content, "ph25")} />
+      <PageHeader title={donate.heading} image={bannerFor(content, "donate")} />
       <section className="section">
         <div className="container narrow center">
           <Icon name="heart" />

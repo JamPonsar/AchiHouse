@@ -1,6 +1,7 @@
 import Text from "../components/Text.jsx";
 import Phones from "../components/Phones.jsx";
 import { Icon } from "../components/EventModal.jsx";
+import { bannerFor } from "../lib/banners.js";
 import PageHeader from "./PageHeader.jsx";
 import { useContent } from "../lib/content.jsx";
 
@@ -12,7 +13,7 @@ export default function Contact() {
 
   return (
     <>
-      <PageHeader title={contact.heading} intro={contact.intro} image="/photos/photo-26.jpg" />
+      <PageHeader title={contact.heading} intro={contact.intro} image={bannerFor(content, "contact")} />
       <section className="section">
         <div className="container contact-grid">
           <div className="contact-cards">

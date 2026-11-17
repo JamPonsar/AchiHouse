@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import Text from "../components/Text.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 import Modal from "../components/Modal.jsx";
+import { bannerFor } from "../lib/banners.js";
 import PageHeader from "./PageHeader.jsx";
 import { framedStyle, masterFrame, useContent, photoById, photoSrc } from "../lib/content.jsx";
 
@@ -78,7 +79,7 @@ export default function About() {
 
   return (
     <>
-      <PageHeader title={content.settings.navAbout?.trim() || "About Us"} intro={content.settings.tagline} image={photoSrc(content, "ph27")} />
+      <PageHeader title={content.settings.navAbout?.trim() || "About Us"} intro={content.settings.tagline} image={bannerFor(content, "about")} />
 
       <section className="section">
         <div className="container split">

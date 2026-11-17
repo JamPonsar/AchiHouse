@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
 import { api } from "../lib/api.js";
-import { listChanges } from "../lib/diff.js";
+import { listChanges, sameContent } from "../lib/diff.js";
 import { baselineOf } from "../lib/changes.js";
 import { withDefaults } from "../lib/defaults.js";
 import { prepareImage } from "./image.js";
@@ -20,7 +20,7 @@ import Requests from "./sections/Requests.jsx";
 import History from "./sections/History.jsx";
 import "./admin.css";
 
-const AdminContext = createContext(null);
+export const AdminContext = createContext(null);
 export const useAdmin = () => useContext(AdminContext);
 
 // Used by fieldReset: while this is an array, edit() records what would be written instead of writing
@@ -58,7 +58,7 @@ export const newId =(prefix) => `${prefix}-${Date.now().toString(36)}${Math.rand
 const SECTIONS = [
   { to: "/admin", label: "Start here", icon: "🏠", end: true },
   { group: "Website pages" },
-  { to: "/admin/header", label: "Header & logo", icon: "🏷️" },
+  { to: "/admin/header", label: "Header, logo & banners", icon: "🏷️" },
   { to: "/admin/home", label: "Home page", icon: "🖼️" },
   { to: "/admin/about", label: "About page", icon: "📖" },
   { to: "/admin/events", label: "Events", icon: "📅" },
@@ -256,7 +256,7 @@ export default function AdminApp() {
   // Everything on the published site, so fields can tell whether they've been changed
   const baseline = useMemo(() => (published ? baselineOf(published) : null), [published]);
   const hasChanges = useMemo(
-    () => !!draft && !!published && JSON.stringify(draft) !== JSON.stringify(published),
+    () => !!draft && !!published && !sameContent(draft, published),
     [draft, published]
   );
 

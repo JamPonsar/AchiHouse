@@ -377,3 +377,33 @@ select.a-input { cursor: pointer; }
 .a-frame-card { width: 130px; aspect-ratio: 16/10; border-radius: 8px; background: var(--a-bg); border: 1px solid var(--a-line); }
 .a-frame-popup { width: 170px; aspect-ratio: 16/9; border-radius: 8px; background: var(--a-bg); border: 1px solid var(--a-line); }
 .a-frame-circle { width: 90px; aspect-ratio: 1; border-radius: 50%; background: var(--a-bg); border: 1px solid var(--a-line); }
+
+/* Event color picker */
+.a-swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.a-swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--a-line); cursor: pointer; padding: 0; }
+.a-swatch.on { box-shadow: 0 0 0 3px var(--a-ink); }
+.a-swatch-custom { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--a-muted); cursor: pointer; }
+.a-swatch-custom input { width: 34px; height: 34px; padding: 0; border: 0; background: none; cursor: pointer; }
+
+.a-save-bar { display: flex; gap: 12px; align-items: center; justify-content: flex-end; flex-wrap: wrap; padding: 16px 0 32px; }
+
+/* Event dates and times */
+.a-tick { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
+.a-tick input { width: 20px; height: 20px; accent-color: var(--a-primary); flex: none; }
+.a-tick em { font-weight: 400; color: var(--a-muted); font-style: normal; }
+.a-when { display: grid; gap: 12px; }
+.a-when-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+.a-when-note { margin: -4px 0 0; }
+@media (max-width: 560px) { .a-when-row { grid-template-columns: 1fr; } }
+
+/* Block hours */
+.a-block-tools { margin-top: 8px; display: grid; gap: 12px; }
+.a-block-tools h4 { margin: 8px 0 0; }
+.a-block-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; }
+.a-block-rental { align-self: center; }
+.a-block-note { grid-column: 1 / -1; }
+.a-block-hint { margin: 4px 0 0; font-size: .9rem; }
+.a-private { background: #fffaf0; border-color: #e3c98a; }
+.a-block-item-text { min-width: 0; }
+.a-block-item-text p { margin: 4px 0 0; white-space: pre-wrap; color: var(--a-muted); }
+.a-block-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 12px; background: #fbf0f0; border-radius: 8px; }

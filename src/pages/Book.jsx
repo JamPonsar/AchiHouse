@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import MonthCalendar from "../components/MonthCalendar.jsx";
+import { bannerFor } from "../lib/banners.js";
 import PageHeader from "./PageHeader.jsx";
 import Text from "../components/Text.jsx";
 import { useContent, photoSrc } from "../lib/content.jsx";
 import { api } from "../lib/api.js";
-import { formatDate, todayKey } from "../lib/dates.js";
+import { Link } from "react-router-dom";
+import DayTimeline from "../components/DayTimeline.jsx";
+import { allDates, dayItems, statusFor } from "../lib/availability.js";
+import { formatDate, formatRange, mergeRanges, todayKey, toMinutes } from "../lib/dates.js";
 
+const DEFAULT_CUSTOM = {
+  title: "Need different hours?",
+  text: "Our rates are for the time periods listed above. If you would like to rent for hours that fall between two rates (for example 9am – 7pm), please call or message us and we can easily work out an arrangement.",
+};
 const EMPTY = { kind: "booking", name: "", email: "", phone: "", date: "", startTime: "", endTime: "", guests: "", eventType: "", message: "", website: "" };
 
 export default function Book() {
@@ -23,21 +31,24 @@ export default function Book() {
     api.get("/api/availability").then(setAvailability).catch(() => {});
   }, []);
 
-  const dayStatus = useMemo(() => {
-    const map = {};
-    for (const d of availability.pending) map[d] = "pending";
-    for (const e of content.events) map[e.date] = "booked";
-    for (const d of booking.blockedDates || []) map[d] = "booked";
-    for (const d of availability.booked) map[d] = "booked";
-    return map;
-  }, [availability, content.events, booking.blockedDates]);
+  // For every date: the hours already taken (events, approved bookings, blocked dates/hours)
+  // and the status: available · partial (some hours taken) · pending · booked (all day).
+  const days = useMemo(() => {
+    const src = { events: content.events, blockedDates: booking.blockedDates || [], blockedTimes: booking.blockedTimes || [], booked: availability.booked };
+    const out = {};
+    for (const date of allDates(src)) {
+      const items = dayItems(date, src);
+      out[date] = { items, busy: mergeRanges(items.map((i) => i.range)), status: statusFor(items) };
+    }
+    for (const d of availability.pending) if (!out[d]) out[d] = { items: [], busy: [], status: "pending" };
+    return out;
+  }, [availability, content.events, booking.blockedDates, booking.blockedTimes]);
+  const statusOf = (key) => days[key]?.status || "available";
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
-  const pickDate = (key) => {
-    setForm((f) => ({ ...f, kind: "booking", date: key }));
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  const pickDate = (key) => setForm((f) => ({ ...f, kind: "booking", date: key }));
+  const goToForm = () => formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const submit = async (e) => {
     e.preventDefault();
@@ -52,11 +63,15 @@ export default function Book() {
     }
   };
 
-  const selectedTaken = form.date && dayStatus[form.date] === "booked";
+  const selectedTaken = form.date && statusOf(form.date) === "booked";
+  const selectedBusy = (form.date && days[form.date]?.busy) || [];
+  const wantStart = toMinutes(form.startTime);
+  const wantEnd = toMinutes(form.endTime);
+  const overlaps = selectedBusy.length > 0 && wantStart !== null && selectedBusy.some(([s, e]) => wantStart < e && (wantEnd === null || wantEnd <= wantStart ? true : wantEnd > s));
 
   return (
     <>
-      <PageHeader title={booking.heading} image={photoSrc(content, "ph01")} />
+      <PageHeader title={booking.heading} image={bannerFor(content, "booking")} />
       <section className="section">
         <div className="container split split-top">
           <Text className="prose lead">{booking.intro}</Text>
@@ -80,6 +95,13 @@ export default function Book() {
                 </div>
               ))}
             </div>
+            {(pricing.customText ?? DEFAULT_CUSTOM.text) && (
+              <div className="rate-custom">
+                <h3>{pricing.customTitle ?? DEFAULT_CUSTOM.title}</h3>
+                <p>{pricing.customText ?? DEFAULT_CUSTOM.text}</p>
+                <Link to="/contact" className="btn btn-maroon btn-sm">Call or message us</Link>
+              </div>
+            )}
             <div className="rate-notes">
               {pricing.notes?.filter(Boolean).length > 0 && (
                 <div className="rate-note">
@@ -101,13 +123,13 @@ export default function Book() {
       <section className="section">
         <div className="container">
           <h2>Availability</h2>
-          <p className="muted">Click an open date to start a booking request.</p>
+          <p className="muted">Click a date to see which hours are booked and which are open, then request it.</p>
           <MonthCalendar
             month={month}
             onMonthChange={setMonth}
             dayProps={(key, outside) => {
-              const s = key < today ? "past" : dayStatus[key] || "available";
-              const clickable = s === "available" || s === "pending";
+              const s = key < today ? "past" : statusOf(key);
+              const clickable = s !== "past";
               return {
                 className: `avail-${s} ${form.date === key ? "selected" : ""}`,
                 onClick: clickable && !outside ? () => pickDate(key) : undefined,
@@ -119,17 +141,34 @@ export default function Book() {
             }}
             renderDay={(key) => {
               if (key < today) return null;
-              const s = dayStatus[key] || "available";
+              const s = statusOf(key);
+              if (s === "partial") {
+                return (
+                  <span className="avail-label">
+                    <span className="avail-times">{days[key].busy.map((r) => formatRange(r)).join(", ")}</span>
+                    <span className="avail-sub">booked</span>
+                  </span>
+                );
+              }
               return <span className="avail-label">{s === "available" ? "Open" : s === "pending" ? "Requested" : "Booked"}</span>;
             }}
             legend={
               <>
                 <span><i className="sw sw-available" /> Open</span>
                 <span><i className="sw sw-pending" /> Requested (may still be available)</span>
-                <span><i className="sw sw-booked" /> Booked</span>
+                <span><i className="sw sw-partial" /> Partly booked (other hours open)</span>
+                <span><i className="sw sw-booked" /> Booked all day</span>
               </>
             }
           />
+          {form.date && form.date >= today && (
+            <DayTimeline date={form.date} items={days[form.date]?.items || []}>
+              {statusOf(form.date) !== "booked" && (
+                <button type="button" className="btn btn-maroon btn-sm" onClick={goToForm}>Request this date</button>
+              )}
+              {statusOf(form.date) === "booked" && <p className="muted">This day is fully booked. Try another date.</p>}
+            </DayTimeline>
+          )}
         </div>
       </section>
 
@@ -167,6 +206,12 @@ export default function Book() {
                     <label>End time<input type="time" value={form.endTime} onChange={set("endTime")} /></label>
                     <label>Guests<input type="number" min="1" value={form.guests} onChange={set("guests")} /></label>
                   </div>
+                  {selectedBusy.length > 0 && !selectedTaken && (
+                    <p className={`notice ${overlaps ? "notice-warn" : ""}`}>
+                      On {formatDate(form.date, { month: "long", day: "numeric" })} the space is already booked {selectedBusy.map((r) => formatRange(r)).join(" and ")}.
+                      {overlaps ? " The times you entered overlap with that, so we may suggest different hours." : " The other hours are open."}
+                    </p>
+                  )}
                   {selectedTaken && <p className="notice notice-warn">This date is already booked. You can still send a request, but we may suggest another date.</p>}
                 </>
               )}

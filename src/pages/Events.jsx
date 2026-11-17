@@ -1,10 +1,12 @@
+import { eventChipStyle } from "../lib/colors.js";
 import { useMemo, useState } from "react";
 import MonthCalendar from "../components/MonthCalendar.jsx";
 import EventModal, { Icon } from "../components/EventModal.jsx";
 import NoUpcoming from "../components/NoUpcoming.jsx";
+import { bannerFor } from "../lib/banners.js";
 import PageHeader from "./PageHeader.jsx";
 import { coverStyle, galleryPhotos, useContent, photoSrc } from "../lib/content.jsx";
-import { formatDate, formatTime, formatTimeRange, fromKey, sortEvents, todayKey } from "../lib/dates.js";
+import { eventDayKeys, eventEnd, eventShortWhen, formatTime, fromKey, sortEvents, todayKey } from "../lib/dates.js";
 
 export default function Events() {
   const { content, deletedEvents } = useContent();
@@ -15,20 +17,20 @@ export default function Events() {
 
   const byDate = useMemo(() => {
     const map = {};
-    for (const ev of sortEvents(content.events)) (map[ev.date] ||= []).push(ev);
+    for (const ev of sortEvents(content.events)) for (const key of eventDayKeys(ev)) (map[key] ||= []).push(ev);
     return map;
   }, [content.events]);
 
-  const upcoming = sortEvents(content.events.filter((e) => e.date >= today));
-  const past = sortEvents(content.events.filter((e) => e.date < today), -1);
+  const upcoming = sortEvents(content.events.filter((e) => eventEnd(e) >= today));
+  const past = sortEvents(content.events.filter((e) => eventEnd(e) < today), -1);
   const current = tab === "upcoming" ? upcoming : past;
   // Preview with "Show changes" on: events deleted since the live site, shown crossed out
-  const ghosts = deletedEvents.filter((e) => (tab === "upcoming" ? e.date >= today : e.date < today)).map((e) => ({ ...e, isDeleted: true }));
+  const ghosts = deletedEvents.filter((e) => (tab === "upcoming" ? eventEnd(e) >= today : eventEnd(e) < today)).map((e) => ({ ...e, isDeleted: true }));
   const list = sortEvents([...current, ...ghosts], tab === "upcoming" ? 1 : -1);
 
   return (
     <>
-      <PageHeader title={content.settings.navEvents?.trim() || "Events"} intro="Prayer gatherings, classes, celebrations and more. Everyone is welcome." image={photoSrc(content, "ph10")} />
+      <PageHeader title={content.settings.navEvents?.trim() || "Events"} intro="Prayer gatherings, classes, celebrations and more. Everyone is welcome." image={bannerFor(content, "events")} />
       <section className="section">
         <div className="container">
           <MonthCalendar
@@ -36,8 +38,8 @@ export default function Events() {
             onMonthChange={setMonth}
             renderDay={(key) =>
               (byDate[key] || []).map((ev) => (
-                <button key={ev.id} className={`cal-event ${key < today ? "is-past" : ""}`} onClick={(e) => { e.stopPropagation(); setOpenEvent(ev); }} title={ev.title}>
-                  {ev.startTime && <span className="cal-event-time">{formatTime(ev.startTime)}</span>} {ev.title}
+                <button key={ev.id} className={`cal-event ${key < today ? "is-past" : ""}`} onClick={(e) => { e.stopPropagation(); setOpenEvent(ev); }} title={ev.title} style={eventChipStyle(ev.color)}>
+                  {ev.startTime && !ev.allDay && key === ev.date && <span className="cal-event-time">{formatTime(ev.startTime)}</span>} {ev.title}
                 </button>
               ))
             }
@@ -85,7 +87,7 @@ export default function Events() {
                   <span className="event-row-body">
                     <h3>{ev.title}</h3>
                     <span className="event-card-meta">
-                      <Icon name="clock" /> {formatDate(ev.date, { weekday: "long" })}, {formatTimeRange(ev.startTime, ev.endTime)}
+                      <Icon name="clock" /> {eventShortWhen(ev)}
                       {ev.location && <><Icon name="pin" /> {ev.location}</>}
                     </span>
                     <span className="event-row-summary">{ev.summary}</span>

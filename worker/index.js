@@ -183,6 +183,17 @@ async function handleLogin(request, env, url) {
   });
 }
 
+// What visitors may see. Private notes (e.g. who a rental is for, what they paid) stay in the
+// admin only: they are removed here, so they can't be read from the API either.
+function publicContent(data) {
+  const times = data?.booking?.blockedTimes;
+  if (!Array.isArray(times)) return data;
+  return {
+    ...data,
+    booking: { ...data.booking, blockedTimes: times.map((t) => (t.forRental ? { ...t, note: "" } : t)) },
+  };
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -209,16 +220,18 @@ export default {
       // ── Public API ───────────────────────────────────────────────────
       if (path === "/api/content" && method === "GET") {
         const published = await getState(env, "published");
-        return json(published.data, 200, { "cache-control": "no-cache" });
+        return json(publicContent(published.data), 200, { "cache-control": "no-cache" });
       }
 
       if (path === "/api/availability" && method === "GET") {
         const { results } = await env.DB.prepare(
-          "SELECT date, status FROM requests WHERE kind = 'booking' AND date IS NOT NULL AND status IN ('approved','new','read')"
+          "SELECT date, start_time, end_time, status FROM requests WHERE kind = 'booking' AND date IS NOT NULL AND status IN ('new','read')"
         ).all();
         return json({
-          booked: results.filter((r) => r.status === "approved").map((r) => r.date),
-          pending: results.filter((r) => r.status !== "approved").map((r) => r.date),
+          // Approving a request does NOT change the calendar. Rentals are entered by hand in /admin
+          // (Renting → Unavailable dates & hours) so they go through draft → publish.
+          booked: [],
+          pending: results.map((r) => r.date),
         });
       }
 

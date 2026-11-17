@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import Lightbox from "../components/Lightbox.jsx";
+import { bannerFor } from "../lib/banners.js";
 import PageHeader from "./PageHeader.jsx";
 import { galleryPhotos, useContent } from "../lib/content.jsx";
 import { sortEvents } from "../lib/dates.js";
@@ -28,7 +29,7 @@ export default function Photos() {
 
   return (
     <>
-      <PageHeader title={content.settings.navPhotos?.trim() || "Photos"} intro="Moments from our celebrations, ceremonies and everyday life at Achi House." image="/photos/photo-21.jpg" />
+      <PageHeader title={content.settings.navPhotos?.trim() || "Photos"} intro="Moments from our celebrations, ceremonies and everyday life at Achi House." image={bannerFor(content, "photos")} />
       <section className="section">
         <div className="container">
           <div className="filter-bar">

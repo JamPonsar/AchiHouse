@@ -52,14 +52,57 @@ export function relativeTime(iso) {
 }
 
 // Build an .ics file so visitors can add an event to their calendar
+// ── Multi-day and all-day events ─────────────────────────────────────────
+// An event has a `date` and, if it lasts several days, an `endDate`. `allDay` events have no times.
+export const eventEnd = (ev) => (ev.endDate && ev.endDate > ev.date ? ev.endDate : ev.date);
+export const isMultiDay = (ev) => eventEnd(ev) > ev.date;
+export const daysBetween = (a, b) => Math.round((fromKey(b) - fromKey(a)) / 86400000);
+export function eventDayKeys(ev) {
+  const out = [];
+  const end = eventEnd(ev);
+  for (let k = ev.date, i = 0; k <= end && i < 62; k = addDays(k, 1), i++) out.push(k);
+  return out;
+}
+
+const SHORT = { weekday: "short", month: "short", day: "numeric" };
+// { date, time } as full text for the event popup
+export function eventWhen(ev) {
+  const end = eventEnd(ev);
+  const timed = !ev.allDay && !!ev.startTime;
+  if (end === ev.date) {
+    return { date: formatDate(ev.date), time: ev.allDay ? "All day" : timed ? formatTimeRange(ev.startTime, ev.endTime) : "" };
+  }
+  return {
+    date: `${formatDate(ev.date, SHORT)} – ${formatDate(end, { ...SHORT, year: "numeric" })}`,
+    time: ev.allDay ? "All day" : timed ? `Starts ${formatTime(ev.startTime)}${ev.endTime ? ` · Ends ${formatTime(ev.endTime)}` : ""}` : "",
+  };
+}
+// One short line for cards and lists
+export function eventShortWhen(ev) {
+  const end = eventEnd(ev);
+  const timed = !ev.allDay && !!ev.startTime;
+  if (end === ev.date) {
+    const time = ev.allDay ? "All day" : timed ? formatTimeRange(ev.startTime, ev.endTime) : "";
+    return `${formatDate(ev.date, SHORT)}${time ? ` · ${time}` : ""}`;
+  }
+  return `${formatDate(ev.date, SHORT)} – ${formatDate(end, SHORT)}${ev.allDay ? " · All day" : ""}`;
+}
+
 export function icsFor(ev) {
-  const dt = (date, time) => date.replace(/-/g, "") + (time ? "T" + time.replace(":", "") + "00" : "");
-  const esc = (s = "") => s.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\;");
+  const stamp = (date, time) => date.replace(/-/g, "") + "T" + time.replace(":", "") + "00";
+  const esc = (s = "") => s.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+  const end = eventEnd(ev);
+  let when;
+  if (ev.allDay || !ev.startTime) {
+    // all-day events end on the day AFTER their last day in calendar files
+    when = [`DTSTART;VALUE=DATE:${ev.date.replace(/-/g, "")}`, `DTEND;VALUE=DATE:${addDays(end, 1).replace(/-/g, "")}`];
+  } else {
+    when = [`DTSTART:${stamp(ev.date, ev.startTime)}`, ev.endTime ? `DTEND:${stamp(end, ev.endTime)}` : null];
+  }
   const lines = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Achi House//Events//EN", "BEGIN:VEVENT",
     `UID:${ev.id}@achihouse`,
-    ev.startTime ? `DTSTART:${dt(ev.date, ev.startTime)}` : `DTSTART;VALUE=DATE:${dt(ev.date)}`,
-    ev.endTime ? `DTEND:${dt(ev.date, ev.endTime)}` : null,
+    ...when,
     `SUMMARY:${esc(ev.title)}`,
     `LOCATION:${esc(ev.location)}`,
     `DESCRIPTION:${esc(ev.summary || ev.description)}`,
@@ -123,4 +166,50 @@ export function repeatOptions(startKey) {
     { value: "monthly-weekday", label: `Every month on the ${nth >= 5 ? "last" : ordinal(nth)} ${weekday}` },
     { value: "monthly-date", label: `Every month on the ${ordinal(d.getDate())}` },
   ];
+}
+
+// ── Time-of-day availability (used by the Renting calendar) ──────────────
+const DAY_END = 24 * 60;
+export const toMinutes = (t) => {
+  if (!t || !/^\d{1,2}:\d{2}/.test(t)) return null;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+export const fromMinutes = (n) => `${pad(Math.floor(n / 60) % 24)}:${pad(n % 60)}`;
+
+// The hours something occupies on its day, as [start, end) in minutes.
+// No start time → the whole day. No end time (or an end past midnight) → until the end of the day.
+export function busyRange(startTime, endTime) {
+  const s = toMinutes(startTime);
+  if (s === null) return [0, DAY_END];
+  const e = toMinutes(endTime);
+  return [s, e === null || e <= s ? DAY_END : e];
+}
+
+export function mergeRanges(ranges) {
+  const sorted = ranges.map((r) => [...r]).sort((a, b) => a[0] - b[0]);
+  const out = [];
+  for (const r of sorted) {
+    const last = out[out.length - 1];
+    if (last && r[0] <= last[1]) last[1] = Math.max(last[1], r[1]);
+    else out.push(r);
+  }
+  return out;
+}
+
+export const isWholeDay = (merged) => merged.length === 1 && merged[0][0] <= 0 && merged[0][1] >= DAY_END;
+
+export function formatRange([s, e]) {
+  if (s <= 0 && e >= DAY_END) return "all day";
+  return e >= DAY_END ? `${formatTime(fromMinutes(s))} onward` : `${formatTime(fromMinutes(s))} – ${formatTime(fromMinutes(e))}`;
+}
+
+// The hours an event occupies on one particular day (handles all-day and multi-day events)
+export function eventRangeOn(ev, day) {
+  const end = eventEnd(ev);
+  if (ev.allDay || !ev.startTime) return [0, DAY_END];
+  if (end === ev.date) return busyRange(ev.startTime, ev.endTime);
+  if (day === ev.date) return [toMinutes(ev.startTime), DAY_END];
+  if (day === end) return [0, toMinutes(ev.endTime) || DAY_END];
+  return [0, DAY_END];
 }

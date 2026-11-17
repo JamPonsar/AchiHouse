@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { useAdmin } from "../AdminApp.jsx";
 import LogoMark from "../../components/LogoMark.jsx";
-import { Card, ChangedBadge, PageTitle, TextField } from "../fields.jsx";
+import { Card, ChangedBadge, CoverField, PageTitle, TextField } from "../fields.jsx";
+import { BANNER_PAGES, bannerFor } from "../../lib/banners.js";
 
 const MENU = [
   ["navHome", "Home"],
@@ -22,7 +23,7 @@ export default function HeaderEditor() {
 
   return (
     <div className="a-page">
-      <PageTitle title="Header & logo" intro="The name, logo and menu at the top of every page (the name and logo also appear at the bottom).">
+      <PageTitle title="Header, logo & banners" intro="The name, logo and menu at the top of every page (the name and logo also appear at the bottom).">
         <a className="a-btn a-btn-quiet" href="/" target="_blank" rel="noreferrer">View site ↗</a>
       </PageTitle>
 
@@ -39,6 +40,17 @@ export default function HeaderEditor() {
 
       <Card title="Logo" help="Choose a photo, then drag it to position it and use the slider to zoom. What's inside the circle is what visitors see.">
         <LogoField />
+      </Card>
+
+      <Card title="Page banner photos" help="The big picture behind the title at the top of each page. Upload a new photo or choose one from your photo library. Wide, bright photos work best. “Remove” goes back to the original picture.">
+        {BANNER_PAGES.map(([key, label]) => (
+          <CoverField
+            key={key}
+            label={label}
+            value={bannerFor(draft, key)}
+            onChange={(src) => edit((d) => { d.settings.banners = { ...(d.settings.banners || {}), [key]: src }; })}
+          />
+        ))}
       </Card>
 
       <Card title="Menu names" help="Rename the links in the menu. Leave a box empty to keep the original name. The Events, Photos and About page headings use these names too.">
