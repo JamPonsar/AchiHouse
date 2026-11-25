@@ -585,3 +585,23 @@ button { font: inherit; color: inherit; }
 .auth-switch { margin: 18px 0 0; text-align: center; color: var(--muted); }
 .auth-switch button { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--flag-red); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .auth-switch button:hover { color: var(--maroon); }
+
+/* RSVP */
+.rsvp-box { margin: 22px 0 6px; padding: 20px 22px; background: var(--tint); border-radius: var(--radius); display: flex; flex-direction: column; gap: 12px; }
+.rsvp-box h3 { margin: 0; font-size: 1.25rem; }
+.rsvp-note { margin: 0; font-size: .95rem; line-height: 1.5; }
+.rsvp-count { margin: 0; color: var(--maroon); }
+.rsvp-choices { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.rsvp-or { color: var(--muted); }
+.rsvp-form { display: flex; flex-direction: column; gap: 12px; }
+.rsvp-guests { display: flex; flex-direction: column; gap: 12px; }
+.rsvp-guests label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.rsvp-stepper { display: inline-flex; align-items: center; gap: 6px; }
+.rsvp-stepper button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line, #d9cfc2); background: #fff; font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.rsvp-stepper input { width: 64px; text-align: center; }
+.rsvp-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.rsvp-cancel { background: transparent; color: #b42318; border: 1px solid #e3b4ae; }
+.rsvp-mine p { margin: 0 0 10px; }
+.rsvp-small { font-size: .88rem; }
+.tag-going { background: #e3f3e8; color: var(--flag-green); }
+.notice-ok { background: #e3f3e8; color: #1d5b39; padding: 10px 14px; border-radius: 10px; margin: 0; }

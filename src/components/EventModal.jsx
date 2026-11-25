@@ -2,6 +2,7 @@ import { useState } from "react";
 import Modal from "./Modal.jsx";
 import Lightbox from "./Lightbox.jsx";
 import Text from "./Text.jsx";
+import RsvpBox from "./RsvpBox.jsx";
 import { eventEnd, eventWhen, icsFor, todayKey } from "../lib/dates.js";
 import { coverStyle, eventCover, galleryPhotos } from "../lib/content.jsx";
 
@@ -29,6 +30,7 @@ export default function EventModal({ event, content, onClose }) {
             + Add to my calendar
           </a>
         )}
+        {upcoming && <RsvpBox event={event} />}
         {photos.length > 0 && (
           <>
             <h4 className="event-photos-title">Photos ({photos.length})</h4>

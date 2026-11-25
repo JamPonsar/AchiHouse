@@ -1,5 +1,7 @@
 import { eventChipStyle } from "../lib/colors.js";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { api } from "../lib/api.js";
 import MonthCalendar from "../components/MonthCalendar.jsx";
 import EventModal, { Icon } from "../components/EventModal.jsx";
 import NoUpcoming from "../components/NoUpcoming.jsx";
@@ -13,7 +15,22 @@ export default function Events() {
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [openEvent, setOpenEvent] = useState(null);
   const [tab, setTab] = useState("upcoming");
+  const [counts, setCounts] = useState({}); // people planning to attend, per event
+  const [params, setParams] = useSearchParams();
   const today = todayKey();
+
+  useEffect(() => { api.get("/api/rsvps/counts").then(setCounts).catch(() => {}); }, []);
+
+  // A link like /events?event=ID opens that event (used after logging in to RSVP)
+  const wanted = params.get("event");
+  useEffect(() => {
+    const ev = wanted && content.events.find((e) => e.id === wanted);
+    if (ev) setOpenEvent(ev);
+  }, [wanted]); // eslint-disable-line react-hooks/exhaustive-deps
+  const closeEvent = () => {
+    setOpenEvent(null);
+    if (wanted) setParams({}, { replace: true });
+  };
 
   const byDate = useMemo(() => {
     const map = {};
@@ -92,6 +109,7 @@ export default function Events() {
                     </span>
                     <span className="event-row-summary">{ev.summary}</span>
                     {tab === "past" && photoCount > 0 && <span className="tag">{photoCount} photos</span>}
+                    {tab === "upcoming" && counts[ev.id] > 0 && <span className="tag tag-going">{counts[ev.id]} planning to attend</span>}
                   </span>
                   <span className="event-row-arrow">›</span>
                 </button>
@@ -100,7 +118,7 @@ export default function Events() {
           </div>
         </div>
       </section>
-      {openEvent && <EventModal event={openEvent} content={content} onClose={() => setOpenEvent(null)} />}
+      {openEvent && <EventModal event={openEvent} content={content} onClose={closeEvent} />}
     </>
   );
 }

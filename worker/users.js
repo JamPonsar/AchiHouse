@@ -1,8 +1,10 @@
-// Member accounts: sign up, log in, profile, and the admin's read-only list.
+// Member accounts: sign up, log in, profile, and the admin's tools for members.
 //
 //   Public:  POST /api/auth/signup · POST /api/auth/login · POST /api/auth/logout
 //            GET /api/auth/me · PUT /api/auth/me · POST /api/auth/photo
-//   Admin:   GET /api/admin/users   (never includes password hashes)
+//   Admin:   GET /api/admin/users          list members (never includes password hashes)
+//            POST /api/admin/users         create a member (and optionally give them a membership)
+//            PUT /api/admin/users/:id      set or remove a member's membership dates
 //
 // Passwords are never stored. Only a salted PBKDF2 hash is kept, which can't be turned back into
 // the password, so nobody (including admins) can ever see a member's password.
@@ -33,6 +35,24 @@ const WINDOW_MIN = 15;
 const ITERATIONS = 100000; // the most Cloudflare Workers allow
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHOTO_TYPES = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const cleanDate = (v) => (typeof v === "string" && DATE_RE.test(v) && !Number.isNaN(Date.parse(v)) ? v : "");
+// Letters and digits without look-alikes (no 0/O, 1/l/I), for passwords the admin hands to a member
+const TEMP_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+const tempPassword = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (n) => TEMP_CHARS[n % TEMP_CHARS.length]).join("");
+
+// Membership dates from a request body. Both empty = no membership.
+function readMembership(b) {
+  const bought = cleanDate(b.membershipPurchased);
+  const expires = cleanDate(b.membershipExpires);
+  if (b.membershipExpires && !expires) return { error: "That end date isn't a valid date." };
+  if (b.membershipPurchased && !bought) return { error: "That start date isn't a valid date." };
+  if (!expires) return { purchased: null, expires: null };
+  const start = bought || new Date().toISOString().slice(0, 10);
+  if (expires < start) return { error: "The membership can't end before it starts." };
+  return { purchased: start, expires };
+}
 
 const clean = (v, max = 500) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const cleanUrl = (v) => {
@@ -183,12 +203,81 @@ export function makeUserHandlers(h) {
     return error("Not found", 404);
   }
 
-  // /api/admin/users (the caller has already checked the admin login)
-  async function handleAdminUsers(env, method) {
-    if (method !== "GET") return error("Not found", 404);
-    const { results } = await env.DB.prepare(`SELECT ${PUBLIC_COLUMNS} FROM users ORDER BY created_at DESC`).all();
-    return json(results.map(toUser));
+  // /api/admin/users[/:id] (the caller has already checked the admin login)
+  async function handleAdminUsers(request, env, method, rest) {
+    if (!rest) {
+      if (method === "GET") {
+        const { results } = await env.DB.prepare(`SELECT ${PUBLIC_COLUMNS} FROM users ORDER BY created_at DESC`).all();
+        return json(results.map(toUser));
+      }
+      if (method === "POST") {
+        const b = (await request.json().catch(() => null)) || {};
+        const firstName = clean(b.firstName, 80), lastName = clean(b.lastName, 80);
+        const email = clean(b.email, 200).toLowerCase();
+        if (!firstName || !lastName) return error("Please enter a first and last name.");
+        if (!EMAIL_RE.test(email)) return error("Please enter a valid email address.");
+        // No password given: make one. It's shown to the admin once, since it can't be looked up later.
+        const given = typeof b.password === "string" ? b.password : "";
+        if (given && (given.length < 8 || given.length > 200)) return error("The password needs at least 8 characters.");
+        const password = given || tempPassword();
+        const m = readMembership(b);
+        if (m.error) return error(m.error);
+        if (await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first()) {
+          return error("There's already an account with that email.", 409);
+        }
+        const now = new Date().toISOString();
+        const res = await env.DB.prepare(
+          `INSERT INTO users (email, password_hash, first_name, last_name, phone, address, bio, facebook, instagram, membership_purchased, membership_expires, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(email, await hashPassword(password), firstName, lastName, clean(b.phone, 50), clean(b.address, 300), clean(b.bio, 2000), cleanUrl(b.facebook), cleanUrl(b.instagram), m.purchased, m.expires, now, now).run();
+        const user = toUser(await getUser(env, res.meta.last_row_id));
+        return json(given ? { user } : { user, temporaryPassword: password }, 201);
+      }
+      return error("Not found", 404);
+    }
+
+    const id = rest.startsWith("/") ? Number(rest.slice(1)) : NaN;
+    if (!Number.isInteger(id)) return error("Not found", 404);
+
+    if (method === "PUT") {
+      if (!(await getUser(env, id))) return error("That member doesn't exist.", 404);
+      const b = (await request.json().catch(() => null)) || {};
+      const sets = [];
+      const vals = [];
+
+      // Membership dates (sent on their own from the membership box)
+      if ("membershipPurchased" in b || "membershipExpires" in b) {
+        const m = readMembership(b);
+        if (m.error) return error(m.error);
+        sets.push("membership_purchased = ?", "membership_expires = ?");
+        vals.push(m.purchased, m.expires);
+      }
+
+      // Profile details (sent together from the edit form)
+      if ("firstName" in b) {
+        const firstName = clean(b.firstName, 80), lastName = clean(b.lastName, 80);
+        const email = clean(b.email, 200).toLowerCase();
+        if (!firstName || !lastName) return error("Please enter a first and last name.");
+        if (!EMAIL_RE.test(email)) return error("Please enter a valid email address.");
+        if (await env.DB.prepare("SELECT id FROM users WHERE email = ? AND id != ?").bind(email, id).first()) {
+          return error("Another account already uses that email.", 409);
+        }
+        sets.push("first_name = ?", "last_name = ?", "email = ?", "phone = ?", "address = ?", "bio = ?", "facebook = ?", "instagram = ?");
+        vals.push(firstName, lastName, email, clean(b.phone, 50), clean(b.address, 300), clean(b.bio, 2000), cleanUrl(b.facebook), cleanUrl(b.instagram));
+      }
+
+      if (!sets.length) return error("Nothing to change.");
+      await env.DB.prepare(`UPDATE users SET ${sets.join(", ")}, updated_at = ? WHERE id = ?`).bind(...vals, new Date().toISOString(), id).run();
+      return json({ user: toUser(await getUser(env, id)) });
+    }
+    return error("Not found", 404);
   }
 
-  return { handleAuth, handleAdminUsers };
+  // The logged-in member's account row (or null), for other parts of the server such as RSVPs
+  async function currentUser(request, env) {
+    const uid = await readToken(request, env);
+    return uid ? getUser(env, uid) : null;
+  }
+
+  return { handleAuth, handleAdminUsers, currentUser };
 }

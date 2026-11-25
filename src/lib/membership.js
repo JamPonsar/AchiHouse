@@ -1,4 +1,4 @@
-// Membership: 1 year from the purchase date. Status is worked out from the expiration date.
+// Membership: the admin sets when it starts and when it ends (a new one is usually a year). Status is worked out from the end date.
 import { daysBetween, todayKey } from "./dates.js";
 
 export const SOON_DAYS = 30;

@@ -118,6 +118,17 @@ export function addDays(key, n) {
   return toKey(d);
 }
 
+// Add whole months to a date. A day that doesn't exist in the new month (Jan 31 + 1 month) becomes
+// that month's last day.
+export function addMonths(key, n) {
+  const d = fromKey(key);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + n);
+  d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+  return toKey(d);
+}
+
 const ordinal = (n) => {
   const s = ["th", "st", "nd", "rd"], v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);

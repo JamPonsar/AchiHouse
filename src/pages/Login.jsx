@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { useUser } from "../lib/user.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
@@ -10,13 +10,17 @@ const EMPTY = { firstName: "", lastName: "", email: "", phone: "", password: "",
 export default function Login() {
   const { user, setUser, loading } = useUser();
   const navigate = useNavigate();
+  // After logging in, go back to where they came from (e.g. the event they wanted to RSVP to)
+  const [params] = useSearchParams();
+  const wanted = params.get("next") || "";
+  const next = wanted.startsWith("/") && !wanted.startsWith("//") ? wanted : "/profile";
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState(EMPTY);
   const [state, setState] = useState({ busy: false, error: null });
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
   const switchTo = (m) => { setMode(m); setState({ busy: false, error: null }); };
 
-  if (!loading && user) return <Navigate to="/profile" replace />;
+  if (!loading && user) return <Navigate to={next} replace />;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -25,7 +29,7 @@ export default function Login() {
       const body = mode === "login" ? { email: form.email, password: form.password } : form;
       const r = await api.post(`/api/auth/${mode === "login" ? "login" : "signup"}`, body);
       setUser(r.user);
-      navigate("/profile");
+      navigate(next);
     } catch (err) {
       setState({ busy: false, error: err.message });
     }

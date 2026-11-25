@@ -64,5 +64,6 @@ const sql = [
 
 mkdirSync(".wrangler", { recursive: true });
 writeFileSync(".wrangler/mock-users.sql", sql);
-execFileSync("npx", ["wrangler", "d1", "execute", "achihouse-db", "--local", "--file=.wrangler/mock-users.sql"], { stdio: "inherit" });
+// On Windows, npx is a .cmd file, which needs a shell to start
+execFileSync("npx", ["wrangler", "d1", "execute", "achihouse-db", "--local", "--file=.wrangler/mock-users.sql"], { stdio: "inherit", shell: process.platform === "win32" });
 console.log(`\nAdded ${PEOPLE.length} mock members to the LOCAL database. Log in with any of them, e.g. tenzin.dolma@example.com / ${PASSWORD}`);

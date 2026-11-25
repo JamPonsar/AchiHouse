@@ -19,6 +19,8 @@
 
 import { seedContent } from "../src/data/seed.js";
 import { USER_TABLES, makeUserHandlers } from "./users.js";
+import { notifyNewRequest } from "./notify.js";
+import { RSVP_TABLES, makeRsvpHandlers } from "./rsvp.js";
 
 let initialized = false;
 
@@ -55,6 +57,7 @@ async function init(env) {
     ),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS login_attempts (ip TEXT NOT NULL, created_at TEXT NOT NULL)`),
     ...USER_TABLES.map((sql) => env.DB.prepare(sql)),
+    ...RSVP_TABLES.map((sql) => env.DB.prepare(sql)),
   ]);
   const existing = await env.DB.prepare("SELECT key FROM site_state WHERE key = 'published'").first();
   if (!existing) {
@@ -198,9 +201,15 @@ function publicContent(data) {
 }
 
 const members = makeUserHandlers({ json, error, enc, b64, checkPassword, hmacKey });
+const rsvps = makeRsvpHandlers({
+  json, error,
+  currentUser: members.currentUser,
+  // an event on the live website, by id
+  getEvent: async (env, id) => ((await getState(env, "published"))?.data.events || []).find((e) => e.id === id),
+});
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
@@ -265,8 +274,16 @@ export default {
         )
           .bind(new Date().toISOString(), r.kind, r.name, r.email, r.phone, r.date, r.start_time, r.end_time, r.guests, r.event_type, r.message)
           .run();
+        // Email the admin (after the message is saved; a failure here never affects the visitor)
+        const emailed = notifyNewRequest(env, r, url.origin).catch((err) => console.error("Admin email failed:", err.message));
+        if (ctx?.waitUntil) ctx.waitUntil(emailed);
         return json({ ok: true });
       }
+
+      // ── RSVPs ────────────────────────────────────────────────────────
+      if (path === "/api/rsvps/counts" && method === "GET") return rsvps.counts(env);
+      const rsvpMatch = path.match(/^\/api\/events\/([^/]+)\/rsvp$/);
+      if (rsvpMatch) return rsvps.handleEvent(request, env, decodeURIComponent(rsvpMatch[1]), method);
 
       // ── Member accounts ──────────────────────────────────────────────
       if (path.startsWith("/api/auth/")) return members.handleAuth(request, env, url, path.slice("/api/auth/".length), method);
@@ -282,7 +299,8 @@ export default {
         const admin = await readSession(request, env);
         if (!admin) return error("Please sign in.", 401);
         if (sub === "session") return json({ ok: true, name: admin.name });
-        if (sub === "users") return members.handleAdminUsers(env, method);
+        if (sub === "rsvps" || sub.startsWith("rsvps/")) return rsvps.handleAdmin(env, url, method, sub.slice("rsvps".length));
+        if (sub === "users" || sub.startsWith("users/")) return members.handleAdminUsers(request, env, method, sub.slice("users".length));
 
         if (sub === "draft") {
           if (method === "GET") {

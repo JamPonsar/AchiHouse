@@ -471,3 +471,29 @@ select.a-input { cursor: pointer; }
 .a-member-card-body small { color: var(--a-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin .avatar-initials, .a-dialog .avatar-initials { background: var(--a-primary); }
 .admin .member-pill, .a-dialog .member-pill { white-space: nowrap; }
+
+/* Members: editing a membership, adding a user */
+.a-membership-box { margin: 0 0 18px; padding: 16px 18px; background: #faf8f5; border: 1px solid var(--a-line); border-radius: 12px; display: flex; flex-direction: column; gap: 12px; }
+.a-membership-box h3 { margin: 0; font-size: 1.05rem; }
+.a-membership-edit { display: flex; flex-direction: column; gap: 12px; }
+.a-membership-edit p { margin: 0; }
+.a-extend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.a-membership-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.a-ok { color: var(--a-ok); font-weight: 600; }
+.a-temp-password { margin: 14px 0; padding: 14px 16px; background: #fff7e6; border: 1px solid #ecd9a8; border-radius: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.a-temp-password p { margin: 0; }
+.a-temp-password code { font-size: 1.25rem; letter-spacing: .06em; background: #fff; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--a-line); user-select: all; }
+
+.a-confirm-changes { list-style: none; margin: 14px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.a-confirm-changes li { display: grid; grid-template-columns: 100px 1fr auto 1fr; gap: 10px; align-items: center; padding: 10px 12px; background: #faf8f5; border: 1px solid var(--a-line); border-radius: 10px; }
+.a-confirm-changes .a-from { color: var(--a-muted); text-decoration: line-through; }
+.a-confirm-changes .a-to { font-weight: 600; }
+@media (max-width: 560px) { .a-confirm-changes li { grid-template-columns: 1fr; gap: 2px; } .a-confirm-changes li > span[aria-hidden] { display: none; } }
+
+.a-details-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 10px; }
+.a-details-head h3 { margin: 0; font-size: 1.05rem; }
+.a-profile-form { display: flex; flex-direction: column; gap: 12px; }
+
+.a-rsvp-total { margin: 0 0 12px; font-size: 1.05rem; }
+.a-rsvp-table td { vertical-align: top; }
+.a-rsvp-table small { display: block; }

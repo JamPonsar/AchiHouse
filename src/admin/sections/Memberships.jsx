@@ -18,7 +18,7 @@ const nextMonths = (n) => {
 
 // Memberships grouped by the month they expire, so renewals can be planned ahead
 export default function Memberships() {
-  const { members, error } = useMembers();
+  const { members, error, update } = useMembers();
   const [open, setOpen] = useState(null);
   const [showEmpty, setShowEmpty] = useState(false);
   const today = todayKey();
@@ -41,7 +41,7 @@ export default function Memberships() {
 
   return (
     <div className="a-page a-page-wide">
-      <PageTitle title="Memberships" intro="Memberships last one year. See whose membership ends each month, so you can remind them to renew." />
+      <PageTitle title="Memberships" intro="See whose membership ends each month, so you can remind them to renew. Click a person to change how long their membership lasts." />
       {error && <p className="a-error">{error}</p>}
       {!data && !error && <span className="loader" />}
       {data && (
@@ -90,7 +90,7 @@ export default function Memberships() {
           </div>
         </>
       )}
-      {open && <UserDetails user={open} onClose={() => setOpen(null)} />}
+      {open && <UserDetails user={open} onClose={() => setOpen(null)} onChange={(u) => { update(u); setOpen(u); }} />}
     </div>
   );
 }

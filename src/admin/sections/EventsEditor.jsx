@@ -4,6 +4,8 @@ import { AdminContext, useAdmin, newId, ConfirmDialog } from "../AdminApp.jsx";
 import { Card, CoverField, DropZone, Field, PageTitle, PhotoPicker, TextArea, TextField, useUploader } from "../fields.jsx";
 import { EVENT_COLORS } from "../../lib/colors.js";
 import { eventCover } from "../../lib/content.jsx";
+import { api } from "../../lib/api.js";
+import RsvpPanel from "../RsvpPanel.jsx";
 import Modal from "../../components/Modal.jsx";
 import { addDays, daysBetween, eventEnd, eventWhen, formatDate, generateDates, isMultiDay, repeatOptions, sortEvents, todayKey } from "../../lib/dates.js";
 
@@ -42,6 +44,8 @@ function EventList() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("upcoming");
   const [q, setQ] = useState("");
+  const [rsvpCounts, setRsvpCounts] = useState({}); // people planning to attend, per event
+  useEffect(() => { api.get("/api/admin/rsvps/summary").then(setRsvpCounts).catch(() => {}); }, []);
   const today = todayKey();
   const all = draft.events.filter((e) => e.title.toLowerCase().includes(q.toLowerCase()));
   const list = tab === "upcoming" ? sortEvents(all.filter((e) => eventEnd(e) >= today)) : sortEvents(all.filter((e) => eventEnd(e) < today), -1);
@@ -86,6 +90,7 @@ function EventList() {
                 <span>{whenText(ev)}</span>
                 <span className="a-muted">{count} photo{count === 1 ? "" : "s"}</span>
               </div>
+              {rsvpCounts[ev.id]?.people > 0 && <span className="a-pill a-pill-ok" title="People who RSVP'd, including their guests">👥 {rsvpCounts[ev.id].people} going</span>}
               {ev.seriesId && <span className="a-pill" title="Part of a repeating series">↻ Repeats</span>}
               {isNew(ev) && <span className="a-pill a-pill-new">New, not published</span>}
               {isEdited(ev) && <span className="a-pill a-pill-edit">Edited, not published</span>}
@@ -294,7 +299,7 @@ function DetailsCard({ ev, set }) {
 
 function EventForm() {
   const { id } = useParams();
-  const { draft, edit, showToast } = useAdmin();
+  const { draft, published, edit, showToast } = useAdmin();
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [picking, setPicking] = useState(false);
@@ -478,6 +483,12 @@ function EventForm() {
           ))}
         </div>
       </Card>
+
+      {published.events.some((e) => e.id === id) ? (
+        <RsvpPanel eventId={id} />
+      ) : (
+        <Card title="RSVPs"><p className="a-muted">People can RSVP once this event is published on the website.</p></Card>
+      )}
 
       <div className="a-form-footer">
         <span className="a-muted">✓ Changes are saved as a draft automatically. Click <b>Publish changes</b> at the top when ready.</span>
