@@ -4,6 +4,7 @@
 //            GET  /api/availability     → dates already booked / pending
 //            POST /api/requests         → booking request or question from a visitor
 //            GET  /media/<key>          → a photo uploaded through /admin
+//            /api/auth/*                → member sign up / log in / profile (see users.js)
 //
 //   Admin (login required):
 //            POST /api/admin/login, /logout · GET /api/admin/session
@@ -17,6 +18,7 @@
 // Everything else is served from the built React app (see wrangler.jsonc).
 
 import { seedContent } from "../src/data/seed.js";
+import { USER_TABLES, makeUserHandlers } from "./users.js";
 
 let initialized = false;
 
@@ -52,6 +54,7 @@ async function init(env) {
        )`
     ),
     env.DB.prepare(`CREATE TABLE IF NOT EXISTS login_attempts (ip TEXT NOT NULL, created_at TEXT NOT NULL)`),
+    ...USER_TABLES.map((sql) => env.DB.prepare(sql)),
   ]);
   const existing = await env.DB.prepare("SELECT key FROM site_state WHERE key = 'published'").first();
   if (!existing) {
@@ -194,6 +197,8 @@ function publicContent(data) {
   };
 }
 
+const members = makeUserHandlers({ json, error, enc, b64, checkPassword, hmacKey });
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -263,6 +268,9 @@ export default {
         return json({ ok: true });
       }
 
+      // ── Member accounts ──────────────────────────────────────────────
+      if (path.startsWith("/api/auth/")) return members.handleAuth(request, env, url, path.slice("/api/auth/".length), method);
+
       // ── Admin API ────────────────────────────────────────────────────
       if (path.startsWith("/api/admin/")) {
         const sub = path.slice("/api/admin/".length);
@@ -274,6 +282,7 @@ export default {
         const admin = await readSession(request, env);
         if (!admin) return error("Please sign in.", 401);
         if (sub === "session") return json({ ok: true, name: admin.name });
+        if (sub === "users") return members.handleAdminUsers(env, method);
 
         if (sub === "draft") {
           if (method === "GET") {

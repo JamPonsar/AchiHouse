@@ -37,7 +37,7 @@ export default function Requests() {
     <div className="a-page">
       <PageTitle title="Messages & requests" intro="Booking requests and questions sent from the Renting page." />
       <div className="a-note">
-        ℹ️ <b>Approving</b> a booking does <b>not</b> change the Renting calendar. To block the time, use <b>Add to rental calendar</b> on the request. It opens the Renting page with the date and times filled in, and it stays an unpublished change until you publish.
+        ℹ️ <b>Approving</b> a booking does <b>not</b> change the Renting calendar. To block the time, use <b>Add to rental calendar</b> on the request. It opens the rental calendar with the date and times filled in, and it stays an unpublished change until you publish.
       </div>
       <div className="a-toolbar">
         <div className="a-tabs">
@@ -76,7 +76,7 @@ export default function Requests() {
                   <button className="a-btn a-btn-sm a-btn-ok" onClick={() => setStatus(r, "approved", "Approved. Remember to add the time to the rental calendar yourself.")}>✓ Approve booking</button>
                 )}
                 {r.kind === "booking" && r.date && (
-                  <Link className="a-btn a-btn-sm" to="/admin/booking" state={{ date: r.date, start: r.start_time || "", end: r.end_time || "", who: r.name }}>
+                  <Link className="a-btn a-btn-sm" to="/admin/rentals" state={{ date: r.date, start: r.start_time || "", end: r.end_time || "", who: r.name }}>
                     📅 Add to rental calendar
                   </Link>
                 )}

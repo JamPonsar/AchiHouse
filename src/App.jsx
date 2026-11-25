@@ -10,6 +10,9 @@ import Book from "./pages/Book.jsx";
 import Contact from "./pages/Contact.jsx";
 import Donate from "./pages/Donate.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import Login from "./pages/Login.jsx";
+import Profile from "./pages/Profile.jsx";
+import { UserProvider } from "./lib/user.jsx";
 
 // The admin editor is loaded only when someone visits /admin
 const AdminApp = lazy(() => import("./admin/AdminApp.jsx"));
@@ -29,7 +32,9 @@ export default function App() {
         <Route
           element={
             <ContentProvider>
-              <Layout />
+              <UserProvider>
+                <Layout />
+              </UserProvider>
             </ContentProvider>
           }
         >
@@ -40,6 +45,8 @@ export default function App() {
           <Route path="book" element={<Book />} />
           <Route path="contact" element={<Contact />} />
           <Route path="donate" element={<Donate />} />
+          <Route path="login" element={<Login />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

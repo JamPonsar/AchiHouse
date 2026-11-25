@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { NavLink, Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../lib/api.js";
 import { listChanges, sameContent } from "../lib/diff.js";
 import { baselineOf } from "../lib/changes.js";
@@ -7,6 +7,10 @@ import { withDefaults } from "../lib/defaults.js";
 import { prepareImage } from "./image.js";
 import Modal from "../components/Modal.jsx";
 import Login from "./Login.jsx";
+import Hub from "./Hub.jsx";
+import RentalCalendar from "./sections/RentalCalendar.jsx";
+import Users from "./sections/Users.jsx";
+import Memberships from "./sections/Memberships.jsx";
 import Dashboard from "./sections/Dashboard.jsx";
 import HomeEditor from "./sections/HomeEditor.jsx";
 import AboutEditor from "./sections/AboutEditor.jsx";
@@ -55,21 +59,53 @@ function recordWrites(root, fn) {
 
 export const newId =(prefix) => `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-const SECTIONS = [
-  { to: "/admin", label: "Start here", icon: "🏠", end: true },
-  { group: "Website pages" },
-  { to: "/admin/header", label: "Header, logo & banners", icon: "🏷️" },
-  { to: "/admin/home", label: "Home page", icon: "🖼️" },
-  { to: "/admin/about", label: "About page", icon: "📖" },
-  { to: "/admin/events", label: "Events", icon: "📅" },
-  { to: "/admin/photos", label: "Photos", icon: "📷" },
-  { to: "/admin/booking", label: "Renting", icon: "🗓️" },
-  { to: "/admin/contact", label: "Contact info", icon: "☎️" },
-  { to: "/admin/donate", label: "Donate page", icon: "💛" },
-  { group: "Other" },
-  { to: "/admin/requests", label: "Messages & requests", icon: "✉️", badge: "requests" },
-  { to: "/admin/history", label: "Edit history", icon: "🕘" },
+// The admin is split into areas. After signing in you choose one (see Hub.jsx);
+// each has its own menu on the left.
+export const AREAS = [
+  {
+    id: "website", label: "Website editor", icon: "🌐", home: "/admin/site",
+    description: "Change the text, photos, events and pages on the website. Includes the edit history.",
+    paths: ["site", "header", "home", "about", "events", "photos", "booking", "contact", "donate", "history"],
+    nav: [
+      { to: "/admin/site", label: "Start here", icon: "🏠" },
+      { group: "Website pages" },
+      { to: "/admin/header", label: "Header, logo & banners", icon: "🏷️" },
+      { to: "/admin/home", label: "Home page", icon: "🖼️" },
+      { to: "/admin/about", label: "About page", icon: "📖" },
+      { to: "/admin/events", label: "Events", icon: "📅" },
+      { to: "/admin/photos", label: "Photos", icon: "📷" },
+      { to: "/admin/booking", label: "Renting page", icon: "🏛️" },
+      { to: "/admin/contact", label: "Contact info", icon: "☎️" },
+      { to: "/admin/donate", label: "Donate page", icon: "💛" },
+      { group: "Other" },
+      { to: "/admin/history", label: "Edit history", icon: "🕘" },
+    ],
+  },
+  {
+    id: "rentals", label: "Rentals & messages", icon: "🗓️", home: "/admin/rentals",
+    description: "Read booking requests and messages, and manage the rental calendar.",
+    paths: ["rentals", "requests"],
+    nav: [
+      { to: "/admin/rentals", label: "Rental calendar", icon: "🗓️" },
+      { to: "/admin/requests", label: "Messages & requests", icon: "✉️", badge: "requests" },
+    ],
+  },
+  {
+    id: "users", label: "Users", icon: "👥", home: "/admin/users",
+    description: "See everyone who has an account on the website, and whose memberships are ending.",
+    paths: ["users", "memberships"],
+    publishing: false,
+    nav: [
+      { to: "/admin/users", label: "All users", icon: "👥" },
+      { to: "/admin/memberships", label: "Memberships", icon: "🪪" },
+    ],
+  },
 ];
+const areaOf = (pathname) => {
+  const seg = pathname.replace(/^\/admin\/?/, "").split("/")[0];
+  return AREAS.find((a) => a.paths.includes(seg)) || null;
+};
+
 
 export default function AdminApp() {
   const [published, setPublished] = useState(null);
@@ -92,6 +128,8 @@ export default function AdminApp() {
   const lastSaved = useRef(null);
   const timer = useRef(null);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const area = areaOf(pathname);
 
   // Keep this page out of search engines (the server also sends a no-index header)
   useEffect(() => {
@@ -325,12 +363,18 @@ export default function AdminApp() {
   return (
     <AdminContext.Provider value={ctx}>
       <div className="admin">
+        {area ? (
+          <>
         <header className="a-topbar">
           <button className="a-menu-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Menu">☰</button>
+          <NavLink to="/admin" end className="a-home-link" title="Back to all sections">
+            <span aria-hidden="true">⌂</span><span className="hide-sm">All sections</span>
+          </NavLink>
           <div className="a-brand">
             <strong>Achi House</strong>
-            <span>Website editor</span>
+            <span>{area?.label}</span>
           </div>
+          {area?.publishing !== false && (<>
           <div className={`a-status ${hasChanges ? "has-changes" : ""}`}>
             <SaveIndicator state={saveState} />
             {hasChanges ? (
@@ -351,6 +395,7 @@ export default function AdminApp() {
               Publish changes
             </button>
           </div>
+          </>)}
         </header>
 
         {restoreUndo && (
@@ -363,7 +408,7 @@ export default function AdminApp() {
 
         <div className="a-body">
           <nav className={`a-sidebar ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(false)}>
-            {SECTIONS.map((s, i) =>
+            {(area?.nav || []).map((s, i) =>
               s.group ? (
                 <div key={i} className="a-nav-group">{s.group}</div>
               ) : (
@@ -382,7 +427,7 @@ export default function AdminApp() {
 
           <main className="a-main">
             <Routes>
-              <Route index element={<Dashboard newRequests={newRequests} onPublish={() => setDialog("publish")} />} />
+              <Route path="site" element={<Dashboard newRequests={newRequests} onPublish={() => setDialog("publish")} />} />
               <Route path="home" element={<HomeEditor />} />
               <Route path="about" element={<AboutEditor />} />
               <Route path="events/*" element={<EventsEditor />} />
@@ -391,12 +436,20 @@ export default function AdminApp() {
               <Route path="header" element={<HeaderEditor />} />
               <Route path="contact" element={<ContactEditor />} />
               <Route path="donate" element={<DonateEditor />} />
-              <Route path="requests" element={<Requests />} />
               <Route path="history" element={<History />} />
-              <Route path="*" element={<Dashboard newRequests={newRequests} onPublish={() => setDialog("publish")} />} />
+              <Route path="rentals" element={<RentalCalendar />} />
+              <Route path="requests" element={<Requests />} />
+              <Route path="users" element={<Users />} />
+              <Route path="memberships" element={<Memberships />} />
+              <Route path="*" element={<Navigate to="/admin" replace />} />
             </Routes>
           </main>
         </div>
+
+          </>
+        ) : (
+          <Hub areas={AREAS} newRequests={newRequests} onSignOut={signOut} />
+        )}
 
         {dialog === "publish" && <PublishDialog changes={changes} onPublish={publish} onClose={() => setDialog(null)} />}
         {dialog === "discard" && (

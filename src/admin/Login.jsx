@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { api } from "../lib/api.js";
+import PasswordInput from "../components/PasswordInput.jsx";
 
 export default function Login({ onSuccess, expired }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -37,10 +37,7 @@ export default function Login({ onSuccess, expired }) {
         </label>
         <label className="a-field">
           <span className="a-label">Password</span>
-          <div className="a-password">
-            <input className="a-input" type={show ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
-            <button type="button" className="a-btn a-btn-quiet a-btn-sm" onClick={() => setShow(!show)}>{show ? "Hide" : "Show"}</button>
-          </div>
+          <PasswordInput className="a-input" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </label>
         {error && <p className="a-error" role="alert">{error}</p>}
         <button className="a-btn a-btn-primary a-btn-lg" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>

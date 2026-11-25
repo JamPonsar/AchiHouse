@@ -23,4 +23,5 @@ export const api = {
   patch: (url, body) => request("PATCH", url, body),
   del: (url) => request("DELETE", url),
   upload: (blob, type) => request("POST", "/api/admin/upload", blob, { "content-type": type }),
+  uploadTo: (url, blob, type) => request("POST", url, blob, { "content-type": type }),
 };

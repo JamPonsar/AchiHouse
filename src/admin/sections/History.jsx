@@ -136,7 +136,7 @@ export default function History() {
             replaceDraft(r.draft);
             setRestoring(null);
             showToast("Older version loaded into your draft. Use Undo restore at the top to go back.");
-            navigate("/admin");
+            navigate("/admin/site");
           }}
         />
       )}

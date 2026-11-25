@@ -3,7 +3,7 @@ import { useAdmin } from "../AdminApp.jsx";
 import { Card } from "../fields.jsx";
 import { eventEnd, todayKey } from "../../lib/dates.js";
 
-export default function Dashboard({ newRequests, onPublish }) {
+export default function Dashboard({ onPublish }) {
   const { draft, hasChanges, changes } = useAdmin();
   const upcoming = draft.events.filter((e) => eventEnd(e) >= todayKey()).length;
 
@@ -11,7 +11,7 @@ export default function Dashboard({ newRequests, onPublish }) {
     <div className="a-page">
       <div className="a-welcome">
         <h1>Welcome! 👋</h1>
-        <p>This is where you update the Achi House website. Choose a page on the left to start editing.</p>
+        <p>This is the website editor. Choose a page on the left to start editing. Rental bookings and messages are in their own section (⌂ All sections, top left).</p>
       </div>
 
       <Card title="How it works">
@@ -32,7 +32,7 @@ export default function Dashboard({ newRequests, onPublish }) {
       <div className="a-quick">
         <Link to="/admin/events/new" className="a-quick-card"><span>📅</span><strong>Add an event</strong><small>{upcoming} upcoming</small></Link>
         <Link to="/admin/photos" className="a-quick-card"><span>📷</span><strong>Upload photos</strong><small>{draft.photos.length} in library</small></Link>
-        <Link to="/admin/requests" className="a-quick-card"><span>✉️</span><strong>Messages & requests</strong><small>{newRequests ? `${newRequests} new` : "No new messages"}</small></Link>
+        <Link to="/admin/header" className="a-quick-card"><span>🏷️</span><strong>Banners & logo</strong><small>Pictures at the top of pages</small></Link>
         <Link to="/admin/home" className="a-quick-card"><span>🖼️</span><strong>Edit home page</strong><small>Slideshow & welcome text</small></Link>
       </div>
     </div>

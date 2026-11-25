@@ -4,6 +4,8 @@ import { useContent, exitPreview } from "../lib/content.jsx";
 import Text from "./Text.jsx";
 import Phones from "./Phones.jsx";
 import LogoMark from "./LogoMark.jsx";
+import Avatar from "./Avatar.jsx";
+import { useUser } from "../lib/user.jsx";
 import ChangeHighlighter, { countChanges } from "./ChangeHighlighter.jsx";
 
 // `key` is the setting that can rename the link (see "Header & logo" in the editor)
@@ -34,6 +36,7 @@ export default function Layout() {
   const { content, preview, published, compare, showChanges, toggleChanges } = useContent();
   const { settings } = content;
   const [open, setOpen] = useState(false);
+  const { user } = useUser();
   const changeCount = useMemo(
     () => (preview
       ? countChanges(published, content) + (published?.events || []).filter((e) => !content.events.some((x) => x.id === e.id)).length
@@ -85,6 +88,14 @@ export default function Layout() {
               <NavLink key={n.to} to={n.to} end={n.to === "/"}>{nameOf(settings, n)}</NavLink>
             ))}
             <NavLink to="/donate" className="btn btn-gold nav-donate">{(settings.navDonate || "").trim() || "Donate"}</NavLink>
+            {user ? (
+              <NavLink to="/profile" className="nav-account" title="My profile">
+                <Avatar user={user} size={36} className="nav-avatar" />
+                <span className="nav-account-text">My profile</span>
+              </NavLink>
+            ) : (
+              <NavLink to="/login" className="nav-account nav-login">Log in</NavLink>
+            )}
           </nav>
         </div>
       </header>

@@ -41,7 +41,11 @@ const SECTION_FIELDS = {
   },
   booking: {
     page: "Renting page", to: "/admin/booking",
-    fields: { heading: "Heading", intro: "Intro text", details: "Details list", pricing: "Rental rates", blockedDates: "Unavailable dates", blockedTimes: "Unavailable hours" },
+    fields: { heading: "Heading", intro: "Intro text", details: "Details list", pricing: "Rental rates" },
+  },
+  rentalCalendar: {
+    page: "Rental calendar", to: "/admin/rentals", from: "booking",
+    fields: { blockedDates: "Unavailable dates", blockedTimes: "Unavailable hours" },
   },
   contact: { page: "Contact page", to: "/admin/contact", fields: { heading: "Heading", intro: "Intro text" } },
   donate: {

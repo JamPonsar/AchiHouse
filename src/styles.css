@@ -94,7 +94,10 @@ button { font: inherit; color: inherit; }
   .main-nav.open { display: flex; }
   .main-nav a:not(.btn) { padding: 12px; }
   .main-nav a.active:not(.btn) { box-shadow: inset 3px 0 0 var(--maroon); }
-  .nav-donate { margin: 8px 0 0; }
+  /* In the phone menu, Donate is a plain link like the others (no gold button) */
+  .main-nav a.nav-donate { margin: 0; padding: 12px; background: none; border: 0; box-shadow: none; color: var(--ink); font-weight: 500; font-size: .95rem; text-align: left; justify-content: flex-start; border-radius: 8px; }
+  .main-nav a.nav-donate:hover { background: var(--tint); transform: none; }
+  .main-nav a.nav-donate.active { color: var(--maroon); box-shadow: inset 3px 0 0 var(--maroon); border-radius: 0; }
 }
 
 /* Hero slideshow */
@@ -527,3 +530,58 @@ button { font: inherit; color: inherit; }
 .rate-custom { margin: 22px 0 32px; padding: 20px 24px; background: #fff7e0; border: 1px solid #ebcd7a; border-left: 5px solid var(--gold-dark); border-radius: 12px; display: grid; gap: 8px; justify-items: start; }
 .rate-custom h3 { margin: 0; }
 .rate-custom p { margin: 0; }
+
+/* Member accounts */
+.avatar { border-radius: 50%; object-fit: cover; flex: none; display: inline-block; }
+.avatar-initials { display: inline-grid; place-items: center; background: var(--maroon); color: #fff; font-weight: 700; letter-spacing: .02em; }
+.main-nav a.nav-account { margin-left: 8px; display: inline-flex; align-items: center; gap: 8px; }
+.main-nav a.nav-account:has(.nav-avatar) { padding: 2px; border-radius: 50%; box-shadow: none; }
+.main-nav a.nav-account.active .nav-avatar { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--maroon); }
+.nav-account-text { display: none; }
+.nav-login { font-weight: 600 !important; }
+@media (max-width: 1020px) {
+  .main-nav a.nav-account { margin: 8px 0 0; border-radius: 8px; padding: 12px; }
+  .main-nav a.nav-account:has(.nav-avatar) { padding: 12px; border-radius: 8px; }
+  .nav-avatar { display: none !important; }
+  .nav-account-text { display: inline; }
+}
+
+.auth-wrap { display: flex; justify-content: center; }
+.auth-card { width: 100%; max-width: 480px; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 32px; box-shadow: var(--shadow); }
+.auth-card h1 { margin: 0 0 6px; font-size: 2rem; }
+.auth-form { padding: 0; background: none; box-shadow: none; border: 0; }
+
+.profile-wrap { max-width: 980px; }
+.profile-head { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; margin-bottom: 28px; }
+.profile-head h1 { margin: 0; }
+.profile-head p { margin: 4px 0 10px; }
+.profile-photo { background: none; border: 0; padding: 0; cursor: pointer; display: grid; justify-items: center; gap: 6px; color: var(--maroon); font-weight: 600; font-size: .85rem; }
+.profile-logout { margin-left: auto; }
+.profile-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 820px) { .profile-grid { grid-template-columns: 1fr; } .profile-logout { margin-left: 0; } }
+.profile-card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+.profile-card h2 { margin: 0 0 14px; font-size: 1.4rem; }
+.profile-card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.profile-info { margin: 0; display: grid; gap: 12px; }
+.profile-info div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
+.profile-info dt { color: var(--muted); font-size: .9rem; }
+.profile-info dd { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.profile-form { padding: 0; background: none; box-shadow: none; border: 0; }
+.profile-form-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.profile-member-note { margin: 16px 0 0; font-size: .92rem; }
+.member-pill { display: inline-block; font-size: .82rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.member-active { background: #e3f3e8; color: #1e5a39; }
+.member-expiring { background: #fff1d6; color: #8a5a00; }
+.member-expired { background: #f6dede; color: #8e1b1b; }
+.member-none { background: #eee9e2; color: #6b625c; }
+
+/* Password box with an eye icon (used on the member login page and the admin sign-in) */
+.pw-field { position: relative; display: block; }
+.pw-field input { width: 100%; padding-right: 46px !important; box-sizing: border-box; }
+.pw-eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); width: 36px; height: 36px; display: grid; place-items: center; background: none; border: 0; border-radius: 8px; color: #7a6f68; cursor: pointer; padding: 0; }
+.pw-eye:hover { color: var(--maroon); background: rgba(0,0,0,.04); }
+
+.auth-card .auth-form { margin-top: 20px; }
+.auth-switch { margin: 18px 0 0; text-align: center; color: var(--muted); }
+.auth-switch button { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--flag-red); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.auth-switch button:hover { color: var(--maroon); }
